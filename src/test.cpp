@@ -21,18 +21,14 @@ double test_quad (double q1, double q2, int np, int n)
            *z0 = (double*)malloc(n * sizeof(double)),
            *muo1 = (double*)malloc(n * sizeof(double)),
            *mu0 = (double*)malloc(n * sizeof(double));
-    printf("mu1 = %e, mu2 = %e\n", mu1, mu2);
 
-    for (i = 0; i < n; ++i) z0[i] = (double(i)+M_PI/3)/n;
+    for (i = 0; i < n; ++i) z0[i] = 2.0 * (double(i)+M_PI/3)/n;
     for (i = 0; i < np; ++i) {
         p = sqrt((double(i)+1)/np);
-        printf("p = %e\n", p);
         occultquad_ (z0, &mu1, &mu2, &p, muo1, mu0, &n);
         for (j = 0; j < n; ++j) {
-            /* printf("z0[i] = %e p = %e\n", z0[j], p); */
             tmp = ldlc(p, z0[j], mu1, mu2);
             d = tmp - muo1[j];
-            printf("%e %e %e %e\n", z0[j], tmp, muo1[j], d);
             delta += d*d;
         }
     }
@@ -46,6 +42,6 @@ double test_quad (double q1, double q2, int np, int n)
 
 int main()
 {
-    printf("%e\n", test_quad(0.5, 0.2, 100, 100));
+    printf("%e\n", test_quad(0.5, 0.2, 500, 100));
     return 0;
 }

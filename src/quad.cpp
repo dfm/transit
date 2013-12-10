@@ -3,6 +3,8 @@
 #include <boost/math/special_functions/ellint_3.hpp>
 #include "quad.h"
 
+/* #define VERBOSE */
+
 using boost::math::ellint_1;
 using boost::math::ellint_2;
 using boost::math::ellint_3;
@@ -12,7 +14,7 @@ using boost::math::ellint_3;
     ld = ( ((1-b)*(2*b+a-3)-3*q*(b-2))*ellint_1<double>(k) \
            + 4*p*z*(z2+7*p2-4)*ellint_2<double>(k) \
            - 3*q/a*ellint_3<double, double>(-k, (a-1)/a) ) \
-         / 9*M_PI*sqrt(p*z); \
+         / (9*M_PI*sqrt(p*z)); \
 }
 
 #define LAMBDA_2 { \
@@ -102,43 +104,64 @@ double ldlc (double p, double z, double u1, double u2)
 
         // Compute the limb-darkened cases.
         if (0.5+fabs(p-0.5) < z && z < 1+p) {
+#ifdef VERBOSE
             printf("Case 2\n");
+#endif
             LAMBDA_1;
             ETA_1;
         } else if (p < 0.5 && p <= z && z <= 1-p) {
             if (z == 1-p) {
+#ifdef VERBOSE
                 printf("Case 4\n");
+#endif
                 LAMBDA_5;
             } else if (z == p) {
+#ifdef VERBOSE
                 printf("Case 5\n");
+#endif
                 LAMBDA_4;
             } else {
+#ifdef VERBOSE
                 printf("Case 3\n");
+#endif
                 LAMBDA_2;
             }
             ETA_2;
         } else if (p == 0.5 && z == 0.5) {
+#ifdef VERBOSE
             printf("Case 6\n");
+#endif
             ld = 1.0/3.0-4.0/(9*M_PI);
             eta = 3.0/32.0;
         } else if (p > 0.5 && fabs(1-p) <= z && z <= p) {
             if (z == p) {
+#ifdef VERBOSE
                 printf("Case 7\n");
+#endif
                 LAMBDA_3;
             } else if (z < p && z == 1-p) {
+#ifdef VERBOSE
                 printf("Case 12\n");
+#endif
+                ld = 0.0;
                 // FIXME.
             } else {
+#ifdef VERBOSE
                 printf("Case 8\n");
+#endif
                 LAMBDA_1;
             }
             ETA_1;
         } else if (p < 1.0 && 0 <= z && z < 0.5-fabs(p-0.5)) {
             if (z < DBL_EPSILON) {
+#ifdef VERBOSE
                 printf("Case 10\n");
+#endif
                 LAMBDA_6;
             } else {
+#ifdef VERBOSE
                 printf("Case 9\n");
+#endif
                 LAMBDA_2;
             }
             ETA_2;
