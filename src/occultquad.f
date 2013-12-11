@@ -49,8 +49,8 @@ C Table 3, I.
 C the  source is completely occulted:
 C Table 3, II.
         if(p.ge.1.d0.and.z.le.p-1.d0) then
-          lambdad(i)=1.d0
-          etad(i)=1.d0
+          lambdad(i)=0.d0
+          etad(i)=0.5d0
           lambdae(i)=1.d0
           goto 10
         endif

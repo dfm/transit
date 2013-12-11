@@ -141,10 +141,10 @@ double ldlc (double p, double z, double u1, double u2)
                 LAMBDA_3;
             } else if (z < p && z == 1-p) {
 #ifdef VERBOSE
-                printf("Case 12\n");
+                printf("Case 12 - FIXME\n");
 #endif
-                ld = 0.0;
                 // FIXME.
+                ld = 0.0;
             } else {
 #ifdef VERBOSE
                 printf("Case 8\n");
@@ -165,6 +165,9 @@ double ldlc (double p, double z, double u1, double u2)
                 LAMBDA_2;
             }
             ETA_2;
+        } else {
+            printf("FAIL\n");
+            return 9999999999.0;
         }
     }
 
