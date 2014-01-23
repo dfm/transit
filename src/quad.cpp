@@ -8,6 +8,7 @@
 using boost::math::ellint_1;
 using boost::math::ellint_2;
 using boost::math::ellint_3;
+using transit::QuadraticLimbDarkening;
 
 #define LAMBDA_1 { \
     double k = sqrt(0.25*(1-a)/(z*p)); \
@@ -72,8 +73,14 @@ double max (double a, double b)
 
 double ldlc (double p, double z, double u1, double u2)
 {
-    double ld, le, eta, omega = 1.0 - u1/3.0 - u2/6.0,
-           p2, z2, a, b, q, kap0, kap1, Kk, Ek, Pk;
+    QuadraticLimbDarkening ld(u1, u2);
+    return ld(p, z);
+}
+
+double QuadraticLimbDarkening::operator () (double p, double z) const
+{
+    double ld, le, eta, omega = 1.0 - u1_/3.0 - u2_/6.0,
+           p2, z2, a, b, q, kap0, kap1;
 
     // Make sure that z is positive.
     z = fabs(z);
@@ -143,7 +150,6 @@ double ldlc (double p, double z, double u1, double u2)
 #ifdef VERBOSE
                 printf("Case 12 - FIXME\n");
 #endif
-                // FIXME.
                 ld = 0.0;
             } else {
 #ifdef VERBOSE
@@ -166,12 +172,9 @@ double ldlc (double p, double z, double u1, double u2)
             }
             ETA_2;
         } else {
-            printf("FAIL\n");
-            return 9999999999.0;
+            return 1.0;
         }
     }
-
     if (z < p) ld += 2.0/3;
-
-    return 1.0-((1-u1-2*u2)*le + (u1+2*u2)*ld + u2*eta)/omega;
+    return 1.0-((1-u1_-2*u2_)*le + (u1_+2*u2_)*ld + u2_*eta)/omega;
 }
