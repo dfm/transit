@@ -20,6 +20,8 @@ public:
         factor_ = 2.0 * sqrt(opr_*opr_ - b2_)/duration_;
     };
 
+    int get_status () const { return 0; };
+
     double operator () (double t) const {
         double x = factor_ * (fmod(t+hp_-t0_, period_)-hp_);
         return ld_(ror_, sqrt(b2_ + x*x));

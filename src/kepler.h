@@ -61,7 +61,12 @@ class KeplerSolver {
 public:
 
     KeplerSolver (L ld, double mstar, double rstar)
-        : ld_(ld), mstar_(mstar), rstar_(rstar) {};
+        : ld_(ld), mstar_(mstar), rstar_(rstar)
+    {
+        status_ = 0;
+    };
+
+    int get_status () const { return status_; };
 
     int add_body (double m, double r, double a, double t0, double e,
                   double pomega, double ix, double iy)
@@ -94,7 +99,7 @@ public:
         return 0;
     };
 
-    int solve (double t, int i, double pos[]) const {
+    void solve (double t, int i, double pos[]) {
         int info = 0, sgn;
         double e = e_[i], a = a_[i],
                period = periods_[i],
@@ -112,14 +117,20 @@ public:
         psi = kepler_mean_to_ecc_anomaly (manom, e, &info);
 
         // Did solve fail?
-        if (info != 0) return info;
+        if (info != 0) {
+            if (!status_) status_ = info;
+            return;
+        }
 
         cpsi = cos(psi);
         spsi = sin(psi);
 
         // Compute the true anomaly.
         d = 1.0 - e * cpsi;
-        if (d == 0.0) return 3;
+        if (d == 0.0){
+            if (!status_) status_ = 3;
+            return;
+        }
         cth = (cpsi - e) / d;
         sth = sqrt(1 - cth * cth);
 
@@ -157,15 +168,13 @@ public:
         // coords[6*i+3] = sgn * (dxpdt * cix);
         // coords[6*i+4] = sgn * (dypdt * ciy - dxsxdt * siy);
         // coords[6*i+5] = sgn * (dypdt * siy + dxsxdt * ciy);
-
-        return 0;
     };
 
-    double operator () (double t) const {
-        int i, info, l = mp_.size();
+    double operator () (double t) {
+        int i, l = mp_.size();
         double lam = 1.0, pos[3];
         for (i = 0; i < l; ++i) {
-            info = solve(t, i, pos);
+            solve(t, i, pos);
             lam *= ld_(ror_[i], sqrt(pos[1]*pos[1] + pos[2]*pos[2]));
         }
         return lam;
@@ -174,6 +183,7 @@ public:
 private:
 
     L ld_;
+    int status_;
     double mstar_, rstar_;
     std::vector<double> mp_, ror_, a_, t0_, e_, pomega_, ix_, iy_,
                         periods_, dmanomdt_, psi0s_, t1s_, cpom_, spom_,

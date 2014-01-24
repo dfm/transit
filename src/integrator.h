@@ -8,7 +8,9 @@ public:
     Integrator (S solver, double tol, int maxdepth)
         : solver_(solver), tol_(tol), maxdepth_(maxdepth) {};
 
-    double integrate (double f0, double t, double texp, int depth) const {
+    int get_status () const { return solver_.get_status(); };
+
+    double integrate (double f0, double t, double texp, int depth) {
         double st = texp/3.0,
                tp = t+st,
                tm = t-st,
@@ -24,7 +26,7 @@ public:
         return (f0+fp+fm) / 3.0;
     };
 
-    double operator () (double t, double texp) const {
+    double operator () (double t, double texp) {
         return integrate(solver_(t), t, texp, 0);
     };
 
