@@ -8,7 +8,7 @@
 /* Docstrings */
 static char doc[] = "Compute transit models.\n";
 
-static PyObject *transit_ldlc(PyObject *self, PyObject *args)
+static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
 {
     int maxdepth;
     double mstar, rstar, mu1, mu2, texp, tol;
@@ -76,7 +76,7 @@ static PyObject *transit_ldlc(PyObject *self, PyObject *args)
 
     // Compute the model light curve.
     double *lam = PyArray_DATA(lam_array);
-    int info = ldlc(mu1, mu1, mstar, rstar, np, mp, r, a, t0, e, pomega, ix, iy, texp, tol, maxdepth, n, t, lam);
+    int info = ldlc_kepler(mu1, mu1, mstar, rstar, np, mp, r, a, t0, e, pomega, ix, iy, texp, tol, maxdepth, n, t, lam);
 
     // Clean up a bit.
     Py_DECREF(t_array);
@@ -111,8 +111,54 @@ fail:
     return NULL;
 }
 
+static PyObject *transit_ldlc_simple(PyObject *self, PyObject *args)
+{
+    int maxdepth;
+    double mu1, mu2, p, t0, tau, ror, b, texp, tol;
+    PyObject *t_obj;
+
+    // Parse the input arguments.
+    if (!PyArg_ParseTuple(args, "Odddddddddi",
+                          &t_obj, &mu1, &mu2, &p, &t0, &tau, &ror, &b,
+                          &texp, &tol, &maxdepth))
+        return NULL;
+
+    // Decode the numpy arrays.
+    PyArrayObject *t_array = PARSE_ARRAY(t_obj);
+    if (t_array == NULL)
+        return NULL;
+
+    int n = (int) PyArray_DIM(t_array, 0);
+    double *t = PyArray_DATA(t_array);
+
+    // Allocate the flux array.
+    npy_intp dim[1] = {n};
+    PyArrayObject *lam_array = (PyArrayObject*)PyArray_SimpleNew(1, dim, NPY_DOUBLE);
+    if (lam_array == NULL) {
+        Py_DECREF(t_array);
+        Py_XDECREF(lam_array);
+        return NULL;
+    }
+
+    // Compute the model light curve.
+    double *lam = PyArray_DATA(lam_array);
+    int info = ldlc_simple(mu1, mu1, p, t0, tau, ror, b, texp, tol, maxdepth, n, t, lam);
+
+    // Clean up a bit.
+    Py_DECREF(t_array);
+
+    if (info) {
+        Py_DECREF(lam_array);
+        PyErr_SetString(PyExc_RuntimeError, "Orbit solve failed.");
+        return NULL;
+    }
+
+    return (PyObject*)lam_array;
+}
+
 static PyMethodDef transit_methods[] = {
-    {"ldlc", transit_ldlc, METH_VARARGS, ""},
+    {"ldlc_kepler", transit_ldlc_kepler, METH_VARARGS, ""},
+    {"ldlc_simple", transit_ldlc_simple, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
