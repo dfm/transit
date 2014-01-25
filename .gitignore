@@ -1,4 +1,4 @@
 .DS_Store
-mandel-agol
-quad
+*.pyc
 *.o
+.syntastic_c_config
