@@ -2,6 +2,7 @@
 #include "solver.h"
 #include "kepler.h"
 #include "integrator.h"
+#include "driver.h"
 
 using transit::Integrator;
 using transit::KeplerSolver;
@@ -41,13 +42,12 @@ int ldlc_simple (double u1, double u2, double p, double t0, double tau,
                  double texp, double tol, int maxdepth,
                  int N, double *t, double *lam)
 {
-    int i, info;
-
     QuadraticLimbDarkening ld (u1, u2);
     SimpleSolver<QuadraticLimbDarkening> solver(ld, p, t0, tau, ror, b);
     Integrator<SimpleSolver<QuadraticLimbDarkening> > integrator(solver, tol, maxdepth);
 
     // Compute the integrated light curve.
+    int i;
     for (i = 0; i < N; ++i) {
         lam[i] = integrator(t[i], texp);
         if (integrator.get_status()) return integrator.get_status();
