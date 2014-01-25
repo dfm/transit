@@ -6,7 +6,7 @@ template <class S>
 class Integrator {
 public:
     Integrator (S solver, double tol, int maxdepth)
-        : solver_(solver), tol_(tol), maxdepth_(maxdepth) {};
+        : tol_(tol), maxdepth_(maxdepth), solver_(solver) {};
 
     int get_status () const { return solver_.get_status(); };
 

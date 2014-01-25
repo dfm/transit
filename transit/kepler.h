@@ -85,9 +85,7 @@ public:
         // Pre-compute some constant factors.
         double period = 2 * M_PI * sqrt(a*a*a/G_GRAV/(mstar_+m)),
                psi0 = 2 * atan2(tan(0.5 * pomega), sqrt((1 + e) / (1 - e)));
-        periods_.push_back(period);
         dmanomdt_.push_back(2 * M_PI / period);
-        psi0s_.push_back(psi0);
         t1s_.push_back(t0-0.5*period*(psi0 - e * sin(psi0)) / M_PI);
         cpom_.push_back(cos(pomega));
         spom_.push_back(sin(pomega));
@@ -102,9 +100,7 @@ public:
     void solve (double t, int i, double pos[]) {
         int info = 0, sgn;
         double e = e_[i], a = a_[i],
-               period = periods_[i],
                dmanomdt = dmanomdt_[i],
-               psi0 = psi0s_[i],
                t1 = t1s_[i],
                cpomega = cpom_[i], spomega = spom_[i],
                cix = cix_[i], six = six_[i], ciy = ciy_[i], siy = siy_[i],

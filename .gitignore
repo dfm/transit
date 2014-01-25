@@ -2,3 +2,5 @@
 *.pyc
 *.o
 .syntastic_c_config
+dist
+*.egg-info
