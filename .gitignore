@@ -1,6 +1,8 @@
 .DS_Store
 *.pyc
+*.so
 *.o
 .syntastic_c_config
 dist
+build
 *.egg-info
