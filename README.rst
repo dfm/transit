@@ -11,4 +11,5 @@ Or if Boost isn't in your default search path,
 
 ::
 
-    python setup.py install build_ext -n -I/path/to/boost
+    python setup.py build_ext --include-dirs=/path/to/boost/
+    python setup.py install
