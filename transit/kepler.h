@@ -171,7 +171,8 @@ public:
         double lam = 1.0, pos[3];
         for (i = 0; i < l; ++i) {
             solve(t, i, pos);
-            lam *= ld_(ror_[i], sqrt(pos[1]*pos[1] + pos[2]*pos[2]));
+            if (pos[0] > 0.0)
+                lam *= ld_(ror_[i], sqrt(pos[1]*pos[1] + pos[2]*pos[2]));
         }
         return lam;
     };
