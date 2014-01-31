@@ -168,7 +168,7 @@ public:
 
     double operator () (double t) {
         int i, l = mp_.size();
-        double lam = 1.0, pos[3];
+        double lam = 1.0, pos[3] = {0, 0, 0};
         for (i = 0; i < l; ++i) {
             solve(t, i, pos);
             if (pos[0] > 0.0)
