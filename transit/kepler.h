@@ -172,7 +172,7 @@ public:
         for (i = 0; i < l; ++i) {
             solve(t, i, pos);
             if (pos[0] > 0.0)
-                lam *= ld_(ror_[i], sqrt(pos[1]*pos[1] + pos[2]*pos[2]));
+                lam *= ld_(ror_[i], sqrt(pos[1]*pos[1] + pos[2]*pos[2])/rstar_);
         }
         return lam;
     };
