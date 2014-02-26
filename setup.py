@@ -23,13 +23,13 @@ desc = open("README.rst").read()
 required = ["numpy"]
 
 include_dirs = [
-    "transit",
+    "include",
     numpy.get_include(),
 ]
 src = [
     "transit/_transit.c",
-    "transit/quad.cpp",
-    "transit/driver.cpp",
+    "src/quad.cpp",
+    "src/driver.cpp",
 ]
 ext = Extension("transit._transit", src, include_dirs=include_dirs)
 

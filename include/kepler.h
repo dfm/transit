@@ -5,6 +5,8 @@
 #include <cfloat>
 #include <vector>
 
+#include "limb_darkening.h"
+
 #define KEPLER_MAX_ITER 200
 #define KEPLER_CONV_TOL 1.48e-10
 
@@ -68,13 +70,17 @@ public:
 
     int get_status () const { return status_; };
 
-    int add_body (double m, double r, double a, double t0, double e,
-                  double pomega, double ix, double iy)
+    int add_body (LimbDarkening* ld, double occ, double m, double r, double a,
+                  double t0, double e, double pomega, double ix, double iy)
     {
         if (e < 0.0 || fabs(e - 1.0) <= DBL_EPSILON) return 1;
 
+        pld_.push_back(ld);
+        occ_.push_back(occ);
         mp_.push_back(m);
+        r_.push_back(r);
         ror_.push_back(r/rstar_);
+        iror_.push_back(rstar_/r);
         a_.push_back(a);
         t0_.push_back(t0);
         e_.push_back(e);
@@ -82,9 +88,17 @@ public:
         ix_.push_back(ix);
         iy_.push_back(iy);
 
+        // // Doppler beaming, etc.
+        // zp_.push_back(zp);
+        // ae_.push_back(ae);
+        // lag_.push_back(lag);
+        // ab_.push_back(ab);
+        // ar_.push_back(ar);
+
         // Pre-compute some constant factors.
         double period = 2 * M_PI * sqrt(a*a*a/G_GRAV/(mstar_+m)),
                psi0 = 2 * atan2(tan(0.5 * pomega), sqrt((1 + e) / (1 - e)));
+        periods_.push_back(period);
         dmanomdt_.push_back(2 * M_PI / period);
         t1s_.push_back(t0-0.5*period*(psi0 - e * sin(psi0)) / M_PI);
         cpom_.push_back(cos(pomega));
@@ -106,8 +120,6 @@ public:
                cix = cix_[i], six = six_[i], ciy = ciy_[i], siy = siy_[i],
                manom, psi, cpsi, spsi, d, cth, sth, r, x, y, xp, yp, xsx,
                denom;
-               // drdt, dthdt, dxdt, dydt, dxpdt, dypdt,
-               // dxsxdt;
 
         manom = dmanomdt * (t - t1);
         psi = kepler_mean_to_ecc_anomaly (manom, e, &info);
@@ -133,16 +145,11 @@ public:
         // Compute the radius and derivative.
         denom = 1.0 / (1 + e * cth);
         r = a * (1 - e * e) * denom;
-        // denom = sqrt(1 - e * e);
-        // drdt = dmanomdt * a * e * sth / denom;
-        // dthdt = dmanomdt * a * a * denom / r / r;
 
         // Compute the coordinates in the plane of the orbit.
         sgn = (spsi >= 0) - (spsi < 0);
         x = r * cth;
         y = r * sth * sgn;
-        // dxdt = drdt * cth - r * sth * dthdt;
-        // dydt = (drdt * sth + r * cth * dthdt) * sgn;
 
         // Rotate by pomega.
         xp =  x * cpomega + y * spomega;
@@ -155,38 +162,57 @@ public:
         pos[0] = xp * cix;
         pos[1] = yp * ciy - xsx * siy;
         pos[2] = yp * siy + xsx * ciy;
-
-        // // Rotate the velocities.
-        // dxpdt =  dxdt * cpomega + dydt * spomega;
-        // dypdt = -dxdt * spomega + dydt * cpomega;
-        // dxsxdt = dxpdt * six;
-        // // Compute the velocities.
-        // coords[6*i+3] = sgn * (dxpdt * cix);
-        // coords[6*i+4] = sgn * (dypdt * ciy - dxsxdt * siy);
-        // coords[6*i+5] = sgn * (dypdt * siy + dxsxdt * ciy);
     };
 
-    double operator () (double t) {
+    virtual double operator () (double t) {
         int i, l = mp_.size();
-        double lam = 1.0, pos[3] = {0, 0, 0};
+        double z, lam = 1.0, pos[3] = {0, 0, 0};
         for (i = 0; i < l; ++i) {
+            // Solve Kepler's equation for the position of the body.
             solve(t, i, pos);
-            if (pos[0] > 0.0)
-                lam *= ld_(ror_[i], sqrt(pos[1]*pos[1] + pos[2]*pos[2])/rstar_);
+
+            // Find the impact parameter in the plane of the sky.
+            z = sqrt(pos[1]*pos[1] + pos[2]*pos[2]);
+
+            // Is the body transiting or occulting.
+            if (pos[0] > 0.0) {
+                // If transiting, use the stellar limb darkening profile.
+                lam *= ld_(ror_[i], z/rstar_);
+            } else if (occ_[i] > 0.0) {
+                // If occulting, use the planet's limb darkening profile.
+                double l = (*(pld_[i]))(iror_[i], z/r_[i]);
+                lam *= 1.0 + occ_[i] * (l - 1);
+            }
+
+            // // Include Doppler beaming, ellipsoidal variations, and reflection.
+            // if (ae_[i] > 0.0 || ab_[i] > 0.0 || ar_[i] > 0.0 || fabs(zp_[i]) > 0.0) {
+            //     double phi = fmod(t-t0_[i], periods_[i])/periods_[i], f = zp_[i];
+            //     if (ae_[i] > 0.0)
+            //         f -= ae_[i] * cos(4*M_PI*phi - lag_[i]);
+            //     if (ab_[i] > 0.0)
+            //         f += ab_[i] * sin(2*M_PI*phi);
+            //     if (ar_[i] > 0.0) {
+            //         double cz = -cix_[i] * sin(2*M_PI*phi), z0 = acos(cz);
+            //         f -= ar_[i] * (sin(z0) + (M_PI - z0) * cz) / M_PI;
+            //     }
+            //     lam *= 1+f;
+            // }
         }
         return lam;
     };
 
-private:
+protected:
 
-    L ld_;
     int status_;
+    L ld_;
     double mstar_, rstar_;
-    std::vector<double> mp_, ror_, a_, t0_, e_, pomega_, ix_, iy_,
-                        periods_, dmanomdt_, psi0s_, t1s_, cpom_, spom_,
+    std::vector<LimbDarkening*> pld_;
+    std::vector<double> occ_, mp_, r_, ror_, iror_, a_, t0_, e_, pomega_, ix_,
+                        iy_, periods_, dmanomdt_, t1s_, cpom_, spom_,
                         cix_, six_, ciy_, siy_;
+                        // zp_, ae_, lag_, ab_, ar_;
 
 };
-}
+};
 
 #endif

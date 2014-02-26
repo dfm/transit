@@ -12,12 +12,12 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
 {
     int maxdepth;
     double mstar, rstar, mu1, mu2, texp, tol;
-    PyObject *t_obj, *mp_obj, *r_obj, *a_obj, *t0_obj, *e_obj,
+    PyObject *t_obj, *occ_obj, *mp_obj, *r_obj, *a_obj, *t0_obj, *e_obj,
              *pomega_obj, *ix_obj, *iy_obj;
 
     // Parse the input arguments.
-    if (!PyArg_ParseTuple(args, "OddddOOOOOOOOddi",
-                          &t_obj, &mu1, &mu2, &mstar, &rstar,
+    if (!PyArg_ParseTuple(args, "OddddOOOOOOOOOddi",
+                          &t_obj, &mu1, &mu2, &mstar, &rstar, &occ_obj,
                           &mp_obj, &r_obj, &a_obj, &t0_obj, &e_obj,
                           &pomega_obj, &ix_obj, &iy_obj,
                           &texp, &tol, &maxdepth))
@@ -25,6 +25,7 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
 
     // Decode the numpy arrays.
     PyArrayObject *t_array = PARSE_ARRAY(t_obj),
+                  *occ_array = PARSE_ARRAY(occ_obj),
                   *mp_array = PARSE_ARRAY(mp_obj),
                   *r_array = PARSE_ARRAY(r_obj),
                   *a_array = PARSE_ARRAY(a_obj),
@@ -33,8 +34,8 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
                   *pomega_array = PARSE_ARRAY(pomega_obj),
                   *ix_array = PARSE_ARRAY(ix_obj),
                   *iy_array = PARSE_ARRAY(iy_obj);
-    if (t_array == NULL || mp_array == NULL || r_array == NULL ||
-            a_array == NULL || t0_array == NULL ||
+    if (t_array == NULL || occ_array == NULL || mp_array == NULL ||
+            r_array == NULL || a_array == NULL || t0_array == NULL ||
             e_array == NULL || pomega_array == NULL || ix_array == NULL ||
             iy_array == NULL)
         goto fail;
@@ -43,6 +44,7 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
     int n = (int) PyArray_DIM(t_array, 0),
         np = (int) PyArray_DIM(mp_array, 0);
     if (
+            (int)PyArray_DIM(occ_array, 0) != np    ||
             (int)PyArray_DIM(r_array, 0) != np      ||
             (int)PyArray_DIM(a_array, 0) != np      ||
             (int)PyArray_DIM(t0_array, 0) != np     ||
@@ -57,6 +59,7 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
 
     // Get pointers to the input data.
     double *t = PyArray_DATA(t_array),
+           *occ = PyArray_DATA(occ_array),
            *mp = PyArray_DATA(mp_array),
            *r = PyArray_DATA(r_array),
            *a = PyArray_DATA(a_array),
@@ -76,10 +79,11 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
 
     // Compute the model light curve.
     double *lam = PyArray_DATA(lam_array);
-    int info = ldlc_kepler(mu1, mu1, mstar, rstar, np, mp, r, a, t0, e, pomega, ix, iy, texp, tol, maxdepth, n, t, lam);
+    int info = ldlc_kepler(mu1, mu1, mstar, rstar, np, occ, mp, r, a, t0, e, pomega, ix, iy, texp, tol, maxdepth, n, t, lam);
 
     // Clean up a bit.
     Py_DECREF(t_array);
+    Py_DECREF(occ_array);
     Py_DECREF(mp_array);
     Py_DECREF(r_array);
     Py_DECREF(a_array);
@@ -100,6 +104,7 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
 fail:
 
     Py_XDECREF(t_array);
+    Py_XDECREF(occ_array);
     Py_XDECREF(mp_array);
     Py_XDECREF(r_array);
     Py_XDECREF(a_array);

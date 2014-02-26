@@ -1,7 +1,8 @@
 #include <cmath>
 #include <cfloat>
 #include <boost/math/special_functions/ellint_3.hpp>
-#include "quad.h"
+
+#include "limb_darkening.h"
 
 /* #define VERBOSE */
 
@@ -69,12 +70,6 @@ double max (double a, double b)
 {
     if (a >= b) return a;
     return b;
-}
-
-double ldlc (double p, double z, double u1, double u2)
-{
-    QuadraticLimbDarkening ld(u1, u2);
-    return ld(p, z);
 }
 
 double QuadraticLimbDarkening::operator () (double p, double z) const
