@@ -88,13 +88,6 @@ public:
         ix_.push_back(ix);
         iy_.push_back(iy);
 
-        // // Doppler beaming, etc.
-        // zp_.push_back(zp);
-        // ae_.push_back(ae);
-        // lag_.push_back(lag);
-        // ab_.push_back(ab);
-        // ar_.push_back(ar);
-
         // Pre-compute some constant factors.
         double period = 2 * M_PI * sqrt(a*a*a/G_GRAV/(mstar_+m)),
                psi0 = 2 * atan2(tan(0.5 * pomega), sqrt((1 + e) / (1 - e)));
@@ -210,9 +203,9 @@ protected:
     std::vector<double> occ_, mp_, r_, ror_, iror_, a_, t0_, e_, pomega_, ix_,
                         iy_, periods_, dmanomdt_, t1s_, cpom_, spom_,
                         cix_, six_, ciy_, siy_;
-                        // zp_, ae_, lag_, ab_, ar_;
 
 };
+
 };
 
 #endif
