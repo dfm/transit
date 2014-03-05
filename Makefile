@@ -1,7 +1,8 @@
-CFLAGS = -Isrc
-
 .cpp.o:
-	g++ $(CFLAGS) -o $*.o -c $*.cpp
+	g++ -Iinclude -I/usr/local/include/eigen3 -o $*.o -c $*.cpp
 
-test: transit/test.o transit/quad.o transit/driver.o
-	g++ transit/test.o transit/quad.o transit/driver.o $(CLIBS) -o bin/test
+ldtest: src/ld_test.o src/quad.o
+	g++ src/ld_test.o src/quad.o -o bin/ldtest
+
+clean:
+	rm -rf src/ld_test.o bin/ldtest
