@@ -79,7 +79,7 @@ static PyObject *transit_ldlc_kepler(PyObject *self, PyObject *args)
 
     // Compute the model light curve.
     double *lam = PyArray_DATA(lam_array);
-    int info = ldlc_kepler(mu1, mu1, mstar, rstar, np, occ, mp, r, a, t0, e, pomega, ix, iy, texp, tol, maxdepth, n, t, lam);
+    int info = ldlc_kepler(mu1, mu2, mstar, rstar, np, occ, mp, r, a, t0, e, pomega, ix, iy, texp, tol, maxdepth, n, t, lam);
 
     // Clean up a bit.
     Py_DECREF(t_array);
@@ -147,7 +147,7 @@ static PyObject *transit_ldlc_simple(PyObject *self, PyObject *args)
 
     // Compute the model light curve.
     double *lam = PyArray_DATA(lam_array);
-    int info = ldlc_simple(mu1, mu1, p, t0, tau, ror, b, texp, tol, maxdepth, n, t, lam);
+    int info = ldlc_simple(mu1, mu2, p, t0, tau, ror, b, texp, tol, maxdepth, n, t, lam);
 
     // Clean up a bit.
     Py_DECREF(t_array);

@@ -1,8 +1,13 @@
+default: ldtest integrate_test
+
 .cpp.o:
-	g++ -Iinclude -I/usr/local/include/eigen3 -o $*.o -c $*.cpp
+	g++ -Iinclude -o $*.o -c $*.cpp
 
 ldtest: src/ld_test.o src/quad.o
 	g++ src/ld_test.o src/quad.o -o bin/ldtest
 
+integrate_test: src/integrate_test.o src/quad.o
+	g++ src/integrate_test.o src/quad.o -o bin/integrate_test
+
 clean:
-	rm -rf src/ld_test.o bin/ldtest
+	rm -rf src/*.o bin/*

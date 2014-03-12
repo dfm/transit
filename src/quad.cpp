@@ -80,7 +80,7 @@ double QuadraticLimbDarkening::operator () (double p, double z) const
     // Make sure that z is positive.
     z = fabs(z);
 
-    if (p <= DBL_EPSILON || z >= 1+p) {
+    if (p <= DBL_EPSILON || z >= 1.0+p) {
         ld = 0.0;
         eta = 0.0;
         le = 0.0;

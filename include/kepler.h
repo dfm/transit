@@ -171,7 +171,7 @@ public:
             if (pos[0] > 0.0) {
                 // If transiting, use the stellar limb darkening profile.
                 lam *= ld_(ror_[i], z/rstar_);
-            } else if (occ_[i] > 0.0) {
+            } else if (occ_[i] > 0.0 && pld_[i] != NULL) {
                 // If occulting, use the planet's limb darkening profile.
                 double l = (*(pld_[i]))(iror_[i], z/r_[i]);
                 lam *= 1.0 + occ_[i] * (l - 1);

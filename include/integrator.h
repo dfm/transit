@@ -5,7 +5,7 @@ namespace transit {
 template <class S>
 class Integrator {
 public:
-    Integrator (S solver, double tol, int maxdepth)
+    Integrator (S& solver, double tol, int maxdepth)
         : tol_(tol), maxdepth_(maxdepth), solver_(solver) {};
 
     int get_status () const { return solver_.get_status(); };
@@ -33,7 +33,7 @@ public:
 private:
     double tol_;
     int maxdepth_;
-    S solver_;
+    S& solver_;
 };
 }
 
