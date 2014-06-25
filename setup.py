@@ -5,7 +5,7 @@ import re
 import os
 
 
-def find_boost(hint=None):
+def find_boost(hint=None, verbose=True):
     """
     Find the location of the Boost include directory. This will return
     ``None`` on failure.
@@ -22,7 +22,7 @@ def find_boost(hint=None):
         "/usr/include/local",
     ]
 
-    # Loop over search paths and check for the existence of the Eigen/Dense
+    # Loop over search paths and check for the existence of the required
     # header.
     for d in search_dirs:
         path = os.path.join(d, "boost", "math", "special_functions",
@@ -37,7 +37,8 @@ def find_boost(hint=None):
             if not len(v):
                 continue
             v = v[0]
-            print("Found Boost version {0} in: {1}".format(v, d))
+            if verbose:
+                print("Found Boost version {0} in: {1}".format(v, d))
             return d
     return None
 
