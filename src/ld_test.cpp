@@ -13,7 +13,7 @@ int main ()
            u1 = 2*q1*q2, u2 = q1*(1-2*q2);
 
     QuadraticLaw* law = new QuadraticLaw(u1, u2);
-    NumericalLimbDarkening ld(law, 1e-6, 1000, 100);
+    NumericalLimbDarkening ld(law, 1e-9, 1000, 100);
     QuadraticLimbDarkening gld(u1, u2);
 
     int n = 0;

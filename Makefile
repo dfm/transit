@@ -1,13 +1,12 @@
-default: ldtest integrate_test
+CFLAGS = -Iinclude -I/usr/local/include
+
+default: ldtest
 
 .cpp.o:
-	g++ -Iinclude -o $*.o -c $*.cpp
+	g++ ${CFLAGS} -o $*.o -c $*.cpp
 
 ldtest: src/ld_test.o src/quad.o
-	g++ src/ld_test.o src/quad.o -o bin/ldtest
-
-integrate_test: src/integrate_test.o src/quad.o
-	g++ src/integrate_test.o src/quad.o -o bin/integrate_test
+	g++ ${CFLAGS} src/ld_test.o src/quad.o -o bin/ldtest
 
 clean:
 	rm -rf src/*.o bin/*

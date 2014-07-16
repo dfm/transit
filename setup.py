@@ -4,6 +4,13 @@
 import re
 import os
 
+try:
+    from setuptools import setup, Extension
+    from setuptools.command.build_ext import build_ext as _build_ext
+except ImportError:
+    from distutils.core import setup, Extension
+    from distutils.command.build_ext import build_ext as _build_ext
+
 
 def find_boost(hint=None, verbose=True):
     """
@@ -12,7 +19,7 @@ def find_boost(hint=None, verbose=True):
 
     """
     # List the standard locations including a user supplied hint.
-    search_dirs = [] if hint is None else [hint]
+    search_dirs = [] if hint is None else hint
     search_dirs += [
         "/usr/local/include",
         "/usr/local/homebrew/include",
@@ -42,30 +49,36 @@ def find_boost(hint=None, verbose=True):
             return d
     return None
 
+
+class build_ext(_build_ext):
+    """
+    A custom extension builder that finds the include directories for Boost.
+
+    """
+
+    def build_extension(self, ext):
+        dirs = ext.include_dirs + self.compiler.include_dirs
+
+        # Look for the Boost headers and make sure that we can find them.
+        boost_include = find_boost(hint=dirs)
+        if boost_include is None:
+            raise RuntimeError("Required library Boost not found. "
+                               "Check the documentation for solutions.")
+
+        # Update the extension's include directories.
+        ext.include_dirs += [boost_include]
+
+        # Run the standard build procedure.
+        _build_ext.build_extension(self, ext)
+
 if __name__ == "__main__":
     import sys
     import numpy
-    import argparse
-    from setuptools import setup, Extension
 
     # Publish the library to PyPI.
     if "publish" in sys.argv[-1]:
         os.system("python setup.py sdist upload")
         sys.exit()
-
-    # Allow the user to specify custom search locations.
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--boost-include", dest="boost",
-                        help="Path to the Boost include directory")
-    args, unknown = parser.parse_known_args()
-    sys.argv = [sys.argv[0]] + unknown
-
-    # Find the Boost include directory.
-    boost_include = find_boost(hint=args.boost)
-    if boost_include is None:
-        raise RuntimeError("Required library Boost not found. "
-                           "Try specifying the --boost-include=\"...\" option "
-                           "at the command line.")
 
     # Choose libraries to link.
     libraries = []
@@ -76,7 +89,6 @@ if __name__ == "__main__":
     include_dirs = [
         "include",
         numpy.get_include(),
-        boost_include,
     ]
 
     # The source files.
@@ -101,19 +113,19 @@ if __name__ == "__main__":
 
     # Execute the setup command.
     desc = open("README.rst").read()
-    required = ["numpy"]
     setup(
         name="transit",
         version=transit.__version__,
         author="Daniel Foreman-Mackey",
         author_email="danfm@nyu.edu",
         packages=["transit"],
+        ext_modules=[ext],
         url="http://github.com/dfm/transit",
         license="MIT",
-        description="Compute some transits",
+        description="Compute some transit models",
         long_description=desc,
-        install_requires=required,
-        ext_modules=[ext],
+        package_data={"": ["README.rst", "LICENSE", "include/*.h", ]},
+        cmdclass=dict(build_ext=build_ext),
         classifiers=[
             "Development Status :: 3 - Alpha",
             "Intended Audience :: Science/Research",
