@@ -9,5 +9,7 @@ except NameError:
     __TRANSIT_SETUP__ = False
 
 if not __TRANSIT_SETUP__:
-    __all__ = ["ldlc_simple", "ldlc_kepler"]
-    from ._transit import ldlc_simple, ldlc_kepler
+    __all__ = ["ldlc_simple", "System", "Central", "Body"]
+
+    from ._transit import ldlc_simple
+    from .model import System, Central, Body
