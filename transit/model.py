@@ -90,7 +90,11 @@ class Body(object):
 
     .. code-block:: python
 
-        (r, mass, a, t0, e, pomega, ix, iy)
+        (flux, r, mass, a, t0, e, pomega, ix, iy)
+
+    :param flux:
+        The flux of the body measured relative to the central.
+        (default: ``0.0``)
 
     :param r:
         The radius measured in Solar radii. (default: ``0.0``)

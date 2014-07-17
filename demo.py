@@ -9,9 +9,9 @@ import matplotlib.pyplot as pl
 import transit
 
 s = transit.System(transit.Central())
-s.add_body(transit.Body(flux=0.01, r=0.02, period=10.0, t0=3.0))
+s.add_body(transit.Body(flux=5e-5, r=0.02, period=2.0, t0=0.0))
 
-t = np.linspace(0, 50, 5000)
+t = np.linspace(0, 4, 1000)
 f = s.light_curve(t)
 
 pl.plot(t, f)

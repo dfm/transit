@@ -66,6 +66,7 @@ public:
         : ld_(ld), mstar_(mstar), rstar_(rstar)
     {
         status_ = 0;
+        f0_ = 1.0;
     };
 
     int get_status () const { return status_; };
@@ -159,7 +160,7 @@ public:
 
     virtual double operator () (double t) {
         int i, l = mp_.size();
-        double z, lam = 1.0, pos[3] = {0, 0, 0};
+        double z, lam = 1.0, lp = 0.0, pos[3] = {0, 0, 0};
         for (i = 0; i < l; ++i) {
             // Solve Kepler's equation for the position of the body.
             solve(t, i, pos);
@@ -171,34 +172,21 @@ public:
             if (pos[0] > 0.0) {
                 // If transiting, use the stellar limb darkening profile.
                 lam *= ld_(ror_[i], z/rstar_);
+                lp += occ_[i];
             } else if (occ_[i] > 0.0 && pld_[i] != NULL) {
                 // If occulting, use the planet's limb darkening profile.
                 double l = (*(pld_[i]))(iror_[i], z/r_[i]);
-                lam *= 1.0 + occ_[i] * (l - 1);
+                lp += occ_[i] * l;
             }
-
-            // // Include Doppler beaming, ellipsoidal variations, and reflection.
-            // if (ae_[i] > 0.0 || ab_[i] > 0.0 || ar_[i] > 0.0 || fabs(zp_[i]) > 0.0) {
-            //     double phi = fmod(t-t0_[i], periods_[i])/periods_[i], f = zp_[i];
-            //     if (ae_[i] > 0.0)
-            //         f -= ae_[i] * cos(4*M_PI*phi - lag_[i]);
-            //     if (ab_[i] > 0.0)
-            //         f += ab_[i] * sin(2*M_PI*phi);
-            //     if (ar_[i] > 0.0) {
-            //         double cz = -cix_[i] * sin(2*M_PI*phi), z0 = acos(cz);
-            //         f -= ar_[i] * (sin(z0) + (M_PI - z0) * cz) / M_PI;
-            //     }
-            //     lam *= 1+f;
-            // }
         }
-        return lam;
+        return lam + lp;
     };
 
 protected:
 
     int status_;
     L ld_;
-    double mstar_, rstar_;
+    double mstar_, rstar_, f0_;
     std::vector<LimbDarkening*> pld_;
     std::vector<double> occ_, mp_, r_, ror_, iror_, a_, t0_, e_, pomega_, ix_,
                         iy_, periods_, dmanomdt_, t1s_, cpom_, spom_,
