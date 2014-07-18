@@ -1,6 +1,8 @@
 #ifndef _INTEGRATOR_H_
 #define _INTEGRATOR_H_
 
+#include <cmath>
+
 namespace transit {
 template <class S>
 class Integrator {
@@ -27,7 +29,10 @@ public:
     };
 
     double operator () (double t, double texp) {
-        return integrate(solver_(t), t, texp, 0);
+        texp = fabs(texp);
+        if (texp > 0)
+            return integrate(solver_(t), t, texp, 0);
+        return solver_(t);
     };
 
 private:

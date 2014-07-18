@@ -290,7 +290,7 @@ class System(object):
              for p in self.bodies)
         return izip(*r)
 
-    def light_curve(self, t, texp=0.0, tol=0.1, maxdepth=1):
+    def light_curve(self, t, texp=0.0, tol=0.1, maxdepth=3):
         """
         Get the light curve evaluated at a list of times using the current
         model.
