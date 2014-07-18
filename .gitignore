@@ -2,7 +2,7 @@
 *.pyc
 *.so
 *.o
-.syntastic_c_config
+.syntastic_*_config
 dist
 build
 *.egg-info
