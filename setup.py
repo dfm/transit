@@ -96,7 +96,6 @@ if __name__ == "__main__":
         "transit/_transit.c",
         "src/quad.cpp",
         "src/driver.cpp",
-        "src/elliptic.c",
     ]
 
     # Set up the extension.
