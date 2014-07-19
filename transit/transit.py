@@ -56,6 +56,26 @@ class Central(object):
             self.q2 = q2 if q2 is not None else 0.5
 
     @property
+    def q1(self):
+        return self._q1
+
+    @q1.setter
+    def q1(self, v):
+        if not 0 <= v <= 1:
+            raise ValueError("Invalid limb darkening coefficient")
+        self._q1 = v
+
+    @property
+    def q2(self):
+        return self._q2
+
+    @q2.setter
+    def q2(self, v):
+        if not 0 <= v <= 1:
+            raise ValueError("Invalid limb darkening coefficient")
+        self._q2 = v
+
+    @property
     def coeffs(self):
         q1, q2 = self.q1, self.q2
         q1 = np.sqrt(np.abs(q1))
