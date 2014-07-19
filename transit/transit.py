@@ -300,6 +300,11 @@ class Body(object):
 
     @property
     def duration(self):
+        """
+        The approximate duration of the transit :math:`T_\mathrm{tot}` from
+        Equation (14) in Winn (2010).
+
+        """
         self._check_ps()
         rstar = self.system.central.radius
         k = self.r/rstar
