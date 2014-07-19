@@ -122,9 +122,11 @@ if __name__ == "__main__":
         ext_modules=[ext],
         url="http://github.com/dfm/transit",
         license="MIT",
-        description="Compute some transit models",
+        description="A Python library for computing the light curves of "
+                    "transiting planets",
         long_description=desc,
         package_data={"": ["README.rst", "LICENSE", "include/*.h", ]},
+        include_package_data=True,
         cmdclass=dict(build_ext=build_ext),
         classifiers=[
             "Development Status :: 3 - Alpha",
