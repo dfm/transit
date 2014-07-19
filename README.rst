@@ -1,15 +1,14 @@
-Nothing to see here yet...
+Transit
+=======
 
-Installation
-------------
+**A Python library for generating limb darkened light curves for transiting
+planets on Keplerian orbits.**
 
-::
+.. image:: https://secure.travis-ci.org/dfm/transit.svg?branch=master
+        :target: http://travis-ci.org/dfm/transit
+.. image:: https://pypip.in/d/transit/badge.svg
+        :target: https://pypi.python.org/pypi/transit/
+.. image:: https://pypip.in/v/transit/badge.svg
+        :target: https://pypi.python.org/pypi/transit/
 
-    python setupy.py install
-
-Or if Boost isn't in your default search path,
-
-::
-
-    python setup.py build_ext --include-dirs=/path/to/boost/
-    python setup.py install
+Read the documentation at: `dan.iel.fm/transit <http://dan.iel.fm/transit>`_.

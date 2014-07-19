@@ -1,8 +1,8 @@
 Transit
 =======
 
-This is a Python library for generating limb darkened light curves for
-transiting planets on Keplerian orbits.
+A Python library for generating limb darkened light curves for transiting
+planets on Keplerian orbits.
 
 User Guide
 ----------
