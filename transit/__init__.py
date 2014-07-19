@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__version__ = "0.1.0-dev"
+__version__ = "0.1.0"
 
 try:
     __TRANSIT_SETUP__
