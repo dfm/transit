@@ -2,7 +2,7 @@
 
 from __future__ import division, print_function
 
-__all__ = ["test_impact", "test_period"]
+__all__ = ["test_impact", "test_period", "test_duration"]
 
 import numpy as np
 from ..transit import Body, Central, System

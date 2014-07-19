@@ -118,7 +118,7 @@ if __name__ == "__main__":
         version=transit.__version__,
         author="Daniel Foreman-Mackey",
         author_email="danfm@nyu.edu",
-        packages=["transit"],
+        packages=["transit", "transit.testing"],
         ext_modules=[ext],
         url="http://github.com/dfm/transit",
         license="MIT",
