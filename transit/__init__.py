@@ -11,6 +11,3 @@ except NameError:
 if not __TRANSIT_SETUP__:
     __all__ = ["System", "Central", "Body"]
     from .transit import System, Central, Body
-
-    # Tests.
-    from .test_model import *  # NOQA

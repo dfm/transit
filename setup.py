@@ -119,6 +119,7 @@ if __name__ == "__main__":
         author="Daniel Foreman-Mackey",
         author_email="danfm@nyu.edu",
         packages=["transit"],
+        py_modules=["transit.tests"],
         ext_modules=[ext],
         url="http://github.com/dfm/transit",
         license="MIT",
@@ -135,4 +136,5 @@ if __name__ == "__main__":
             "Operating System :: OS Independent",
             "Programming Language :: Python",
         ],
+        test_suite="nose.collector",
     )

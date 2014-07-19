@@ -91,7 +91,7 @@ execute:
 
 .. code-block:: bash
 
-    nosetests transt -v
+    nosetests -v transit.tests
 
 All of the tests should (of course) pass.
 If any of the tests don't pass and if you can't sort out why, `open an issue
