@@ -13,4 +13,4 @@ if not __TRANSIT_SETUP__:
     from .transit import System, Central, Body
 
     # Tests.
-    from .testing.test_model import *  # NOQA
+    from .test_model import *  # NOQA
