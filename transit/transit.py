@@ -117,8 +117,13 @@ class Body(object):
     :param e:
         The eccentricity of the orbit. (default: ``0.0``)
 
+    :param omega:
+        The orientation of the orbital ellipse in radians as defined by Winn
+        (2010). (default: ``0.5 * pi``)
+
     :param pomega:
-        The orientation of the orbital ellipse in radians. (default: ``0.0``)
+        An alternative definition of the orbital ellipse orientation
+        ``pomega = 0.5 * pi - omega``. (default: ``0.0``)
 
     :param ix:
         The relative inclination of the orbital plane along the line-of-sight
@@ -134,8 +139,8 @@ class Body(object):
 
         .. math::
 
-            b = \frac{a}{R_\star} \cos i_\mathrm{tot} \,
-                \left(\frac{1 - e^2}{1+e\,\sin \pomega} \right)
+            b = \frac{a}{R_\star} \cos i \,
+                \left(\frac{1 - e^2}{1+e\,\sin\omega} \right)
 
         (default: ``0.0``)
 
@@ -147,7 +152,7 @@ class Body(object):
     """
 
     def __init__(self, flux=0.0, r=0.0, mass=0.0, a=None, period=None, t0=0.0,
-                 e=0.0, pomega=0.0, ix=None, b=None, iy=0.0):
+                 e=0.0, omega=None, pomega=None, ix=None, b=None, iy=0.0):
         self.flux = flux
         self.r = r
         self._a = a
@@ -155,7 +160,6 @@ class Body(object):
         self.mass = mass
         self.t0 = t0
         self.e = e
-        self.pomega = pomega
         self._b = b
         self._ix = ix
         self.iy = iy
@@ -171,6 +175,15 @@ class Body(object):
             "You can't supply both an inclination and impact parameter."
         if ix is None and b is None:
             self._ix = 0.0
+
+        assert pomega is None or omega is None, \
+            "You can't specify omega and pomega"
+        if omega is not None:
+            self.omega = omega
+        elif pomega is not None:
+            self.pomega = pomega
+        else:
+            self.pomega = 0.0
 
     def _check_ps(self):
         if not hasattr(self, "system"):
@@ -222,6 +235,10 @@ class Body(object):
 
     @property
     def incl(self):
+        """
+        The standard definition of inclination: 90-deg is edge on.
+
+        """
         self._check_ps()
         return self.system.iobs - self.ix
 
@@ -379,6 +396,9 @@ class System(object):
 
         :param tol:
             The stopping criterion for the exposure time integration.
+
+        :param maxdepth:
+            The maximum recursion depth of the exposure time integrator.
 
         """
         if len(self) == 0:
