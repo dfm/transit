@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cfloat>
 #include <vector>
+#include <cstddef>
 
 #include "limb_darkening.h"
 
