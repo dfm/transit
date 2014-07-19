@@ -1,0 +1,317 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API documentation &mdash; Transit 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Transit 0.1.0 documentation" href="../"/>
+        <link rel="prev" title="Getting started" href="../quickstart/"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../" class="fa fa-home"> Transit</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search/" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../quickstart/">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../quickstart/#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../quickstart/#a-simple-example">A Simple Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">API documentation</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../">Transit</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../">Docs</a> &raquo;</li>
+      
+    <li>API documentation</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="https://github.com/dfm/george/blob/master/docs/api.rst" class="fa fa-github"> Edit on GitHub</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <span class="target" id="module-transit"></span><div class="section" id="api-documentation">
+<span id="api"></span><h1>API documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="transit.Central">
+<em class="property">class </em><tt class="descclassname">transit.</tt><tt class="descname">Central</tt><big>(</big><em>mass=1.0</em>, <em>radius=1.0</em>, <em>flux=1.0</em>, <em>q1=None</em>, <em>q2=None</em>, <em>mu1=None</em>, <em>mu2=None</em><big>)</big><a class="headerlink" href="#transit.Central" title="Permalink to this definition">¶</a></dt>
+<dd><p>The &#8220;central&#8221;&#8212;in this context&#8212;is the massive central body in a
+<a class="reference internal" href="#transit.System" title="transit.System"><tt class="xref py py-class docutils literal"><span class="pre">System</span></tt></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mass</strong> &#8211; The mass of the body measured in Solar masses. (default: <tt class="docutils literal"><span class="pre">1.0</span></tt>)</li>
+<li><strong>radius</strong> &#8211; The radius of the body measured in Solar radii. (default: <tt class="docutils literal"><span class="pre">1.0</span></tt>)</li>
+<li><strong>flux</strong> &#8211; The un-occulted flux measured in whatever units you feel like using.
+(default: <tt class="docutils literal"><span class="pre">1.0</span></tt>)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Limb darkening</strong> can be specified using <tt class="docutils literal"><span class="pre">(mu1,</span> <span class="pre">mu2)</span></tt> or <tt class="docutils literal"><span class="pre">(q1,</span> <span class="pre">q2)</span></tt>.
+TODO: explain.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="transit.Body">
+<em class="property">class </em><tt class="descclassname">transit.</tt><tt class="descname">Body</tt><big>(</big><em>flux=0.0</em>, <em>r=0.0</em>, <em>mass=0.0</em>, <em>a=None</em>, <em>period=None</em>, <em>t0=0.0</em>, <em>e=0.0</em>, <em>omega=None</em>, <em>pomega=None</em>, <em>ix=None</em>, <em>b=None</em>, <em>iy=0.0</em><big>)</big><a class="headerlink" href="#transit.Body" title="Permalink to this definition">¶</a></dt>
+<dd><p>A &#8220;body&#8221;&#8212;in this context&#8212;is a (possibly) massive body orbiting a
+<a class="reference internal" href="#transit.Central" title="transit.Central"><tt class="xref py py-class docutils literal"><span class="pre">Central</span></tt></a> in a <a class="reference internal" href="#transit.System" title="transit.System"><tt class="xref py py-class docutils literal"><span class="pre">System</span></tt></a>. There are several ways to
+initialize this and once it has been added to a system using the
+<a class="reference internal" href="#transit.System.add_body" title="transit.System.add_body"><tt class="xref py py-func docutils literal"><span class="pre">System.add_body()</span></tt></a> method, they should all be equivalent. The orbital
+elements specified either specify a Keplerian orbit. This object includes
+all sorts of magic for converting between different specifications when
+needed but the base description of the planet and the orbit is
+parameterized by the parameters:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">(</span><span class="n">flux</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">pomega</span><span class="p">,</span> <span class="n">ix</span><span class="p">,</span> <span class="n">iy</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>flux</strong> &#8211; The flux of the body measured relative to the central.
+(default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+<li><strong>r</strong> &#8211; The radius measured in Solar radii. (default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+<li><strong>mass</strong> &#8211; The mass in Solar masses. (default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+<li><strong>a</strong> &#8211; The semi-major axis of the orbit measured in Solar radii. Either this
+parameter or <tt class="docutils literal"><span class="pre">period</span></tt> must be provided but not both.</li>
+<li><strong>period</strong> &#8211; The period of the orbit in days. Either this parameter or <tt class="docutils literal"><span class="pre">a</span></tt> must
+be provided but not both.</li>
+<li><strong>t0</strong> &#8211; The epoch of the orbit in days. (default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+<li><strong>e</strong> &#8211; The eccentricity of the orbit. (default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+<li><strong>omega</strong> &#8211; The orientation of the orbital ellipse in radians as defined by Winn
+(2010). (default: <tt class="docutils literal"><span class="pre">0.5</span> <span class="pre">*</span> <span class="pre">pi</span></tt>)</li>
+<li><strong>pomega</strong> &#8211; An alternative definition of the orbital ellipse orientation
+<tt class="docutils literal"><span class="pre">pomega</span> <span class="pre">=</span> <span class="pre">0.5</span> <span class="pre">*</span> <span class="pre">pi</span> <span class="pre">-</span> <span class="pre">omega</span></tt>. (default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+<li><strong>ix</strong> &#8211; The relative inclination of the orbital plane along the line-of-sight
+in degrees. This angle is measured differently than you&#8217;re used to:
+zero degrees is edge on and 90 degrees in face on. This angle will be
+subtracted from the base inclination of the planetary system to get
+the standard measurement of the inclination. Either this parameter
+or <tt class="docutils literal"><span class="pre">b</span></tt> can be specified but not both. (default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+<li><strong>b</strong> &#8211; <p>The mean impact parameter of the orbit measured in stellar radii (not
+Solar radii). Specifically, this impact parameter is defined as</p>
+<div class="math">
+\[b = \frac{a}{R_\star} \cos i \,
+    \left(\frac{1 - e^2}{1+e\,\sin\omega} \right)\]</div>
+<p>(default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</p>
+</li>
+<li><strong>iy</strong> &#8211; The rotation of the orbital ellipse in the plane of the sky measured
+in radians. Note: this value will not affect the light curve or radial
+velocity values at all. (default: <tt class="docutils literal"><span class="pre">0.0</span></tt>)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="transit.Body.duration">
+<tt class="descname">duration</tt><a class="headerlink" href="#transit.Body.duration" title="Permalink to this definition">¶</a></dt>
+<dd><p>The approximate duration of the transit <span class="math">\(T_\mathrm{tot}\)</span> from
+Equation (14) in Winn (2010).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="transit.Body.incl">
+<tt class="descname">incl</tt><a class="headerlink" href="#transit.Body.incl" title="Permalink to this definition">¶</a></dt>
+<dd><p>The standard definition of inclination: 90-deg is edge on.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="transit.System">
+<em class="property">class </em><tt class="descclassname">transit.</tt><tt class="descname">System</tt><big>(</big><em>central</em>, <em>iobs=90.0</em><big>)</big><a class="headerlink" href="#transit.System" title="Permalink to this definition">¶</a></dt>
+<dd><p>A &#8220;planetary system&#8221; contains a &#8220;central&#8221; bright <a class="reference internal" href="#transit.Central" title="transit.Central"><tt class="xref py py-class docutils literal"><span class="pre">Central</span></tt></a> and some
+number (<tt class="docutils literal"><span class="pre">&gt;=</span> <span class="pre">0</span></tt>) <a class="reference internal" href="#transit.Body" title="transit.Body"><tt class="xref py py-class docutils literal"><span class="pre">Body</span></tt></a> objects orbiting. The default orbits
+are purely Keplerian but sub-classes can include more sophisticated
+solvers.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>central</strong> &#8211; A <a class="reference internal" href="#transit.Central" title="transit.Central"><tt class="xref py py-class docutils literal"><span class="pre">Central</span></tt></a> that specifies the central bright object.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Para iobs:</th><td class="field-body">The inclination of the mean orbital plane in degrees. This is
+measured in the standard way with zero inclination meaning face on and
+90 degrees is edge on. (default: <tt class="docutils literal"><span class="pre">90.0</span></tt>)</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="transit.System.add_body">
+<tt class="descname">add_body</tt><big>(</big><em>body</em><big>)</big><a class="headerlink" href="#transit.System.add_body" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a <a class="reference internal" href="#transit.Body" title="transit.Body"><tt class="xref py py-class docutils literal"><span class="pre">Body</span></tt></a> to the system. This function also sets the
+<tt class="docutils literal"><span class="pre">system</span></tt> attribute of the body.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>body</strong> &#8211; The <a class="reference internal" href="#transit.Body" title="transit.Body"><tt class="xref py py-class docutils literal"><span class="pre">Body</span></tt></a> to add.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="transit.System.light_curve">
+<tt class="descname">light_curve</tt><big>(</big><em>t</em>, <em>texp=0.0</em>, <em>tol=0.1</em>, <em>maxdepth=4</em><big>)</big><a class="headerlink" href="#transit.System.light_curve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the light curve evaluated at a list of times using the current
+model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>t</strong> &#8211; The times where the light curve should be evaluated (in days).</li>
+<li><strong>tol</strong> &#8211; The stopping criterion for the exposure time integration.</li>
+<li><strong>maxdepth</strong> &#8211; The maximum recursion depth of the exposure time integrator.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../quickstart/" class="btn btn-neutral" title="Getting started"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2013-2014 Dan Foreman-Mackey.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../_static/js/analytics.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

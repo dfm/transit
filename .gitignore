@@ -1,0 +1,9 @@
+.syntastic_c_config
+.syntastic_cpp_config
+bin
+dist
+docs
+include
+src
+transit
+transit.egg-info

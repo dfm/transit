@@ -1,0 +1,266 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Getting started &mdash; Transit 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Transit 0.1.0 documentation" href="../"/>
+        <link rel="next" title="API documentation" href="../api/"/>
+        <link rel="prev" title="Transit" href="../"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../" class="fa fa-home"> Transit</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search/" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-simple-example">A Simple Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/">API documentation</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../">Transit</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../">Docs</a> &raquo;</li>
+      
+    <li>Getting started</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="https://github.com/dfm/george/blob/master/docs/quickstart.rst" class="fa fa-github"> Edit on GitHub</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="getting-started">
+<span id="quickstart"></span><h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>You can install the most recent stable version of transit using <a class="reference external" href="#stable">PyPI</a> or the development version from <a class="reference external" href="#dev">GitHub</a>.</p>
+<div class="section" id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h3>
+<p>Whichever method you choose, you&#8217;ll need to make sure that you first have
+<a class="reference external" href="http://www.boost.org/">Boost</a> installed.
+On Linux:</p>
+<div class="highlight-bash"><div class="highlight"><pre>sudo apt-get install libboost-dev
+</pre></div>
+</div>
+<p>On Mac:</p>
+<div class="highlight-bash"><div class="highlight"><pre>brew install boost
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Chances are high that transit won&#8217;t work on Windows right now
+because  it hasn&#8217;t been tested at all but feel free to try it out at your
+own risk!</p>
+</div>
+<p>You&#8217;ll also need a working scientific Python installation (including <a class="reference external" href="http://www.numpy.org/">NumPy</a>).
+I recommend the <a class="reference external" href="http://continuum.io/downloads">Anaconda distribution</a> if
+you don&#8217;t already have your own opinions.</p>
+</div>
+<div class="section" id="stable-version">
+<span id="stable"></span><h3>Stable Version<a class="headerlink" href="#stable-version" title="Permalink to this headline">¶</a></h3>
+<p>The simplest way to install the <a class="reference external" href="https://pypi.python.org/pypi/trasit">most recent stable version of transit</a> is using <a class="reference external" href="http://pip.readthedocs.org/">pip</a>:</p>
+<div class="highlight-bash"><div class="highlight"><pre>pip install transit
+</pre></div>
+</div>
+<p>If you installed Boost in a strange place, specify that location by running
+(sorry to say that it&#8217;s pretty freaking ugly):</p>
+<div class="highlight-bash"><div class="highlight"><pre>pip install transit <span class="se">\</span>
+    --global-option<span class="o">=</span>build_ext <span class="se">\</span>
+    --global-option<span class="o">=</span>-I/path/to/boost
+</pre></div>
+</div>
+</div>
+<div class="section" id="development-version">
+<span id="dev"></span><h3>Development Version<a class="headerlink" href="#development-version" title="Permalink to this headline">¶</a></h3>
+<p>To get the source for the development version, clone the git repository:</p>
+<div class="highlight-bash"><div class="highlight"><pre>git clone https://github.com/dfm/transit.git
+<span class="nb">cd </span>transit
+</pre></div>
+</div>
+<p>Then, install the package by running the following command:</p>
+<div class="highlight-bash"><div class="highlight"><pre>python setup.py install
+</pre></div>
+</div>
+<p>If installed Boost in a non-standard location, you can specify the correct
+path using the install command:</p>
+<div class="highlight-bash"><div class="highlight"><pre>python setup.py build_ext -I/path/to/boost install
+</pre></div>
+</div>
+</div>
+<div class="section" id="testing">
+<h3>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h3>
+<p>To run the unit tests, install <a class="reference external" href="https://nose.readthedocs.org">nose</a> and then
+execute:</p>
+<div class="highlight-bash"><div class="highlight"><pre>nosetests -v transit.tests
+</pre></div>
+</div>
+<p>All of the tests should (of course) pass.
+If any of the tests don&#8217;t pass and if you can&#8217;t sort out why, <a class="reference external" href="https://github.com/dfm/transit/issues">open an issue
+on GitHub</a>.</p>
+</div>
+</div>
+<div class="section" id="a-simple-example">
+<h2>A Simple Example<a class="headerlink" href="#a-simple-example" title="Permalink to this headline">¶</a></h2>
+<p>In this example, we&#8217;ll build a simple Earth-like transit and plot the result:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">transit</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">pl</span>
+
+<span class="c"># Build the transiting system.</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">transit</span><span class="o">.</span><span class="n">System</span><span class="p">(</span><span class="n">transit</span><span class="o">.</span><span class="n">Central</span><span class="p">())</span>
+<span class="n">body</span> <span class="o">=</span> <span class="n">transit</span><span class="o">.</span><span class="n">Body</span><span class="p">(</span><span class="n">r</span><span class="o">=</span><span class="mf">0.009155</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="mf">365.25</span><span class="p">,</span> <span class="n">t0</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="mf">0.0167</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">add_body</span><span class="p">(</span><span class="n">body</span><span class="p">)</span>
+
+<span class="c"># Compute the light curve integrated over a Kepler long cadence</span>
+<span class="c"># exposure time.</span>
+<span class="n">texp</span> <span class="o">=</span> <span class="mf">1626.0</span> <span class="o">/</span> <span class="mf">86400.0</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">texp</span><span class="p">)</span>
+<span class="n">f</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">light_curve</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">texp</span><span class="o">=</span><span class="n">texp</span><span class="p">)</span>
+
+<span class="c"># Plot the results</span>
+<span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="p">(</span><span class="n">f</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span> <span class="s">&quot;.k&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This should produce a figure that looks something like this:</p>
+<img alt="../_images/simple.png" src="../_images/simple.png" />
+<p>For a list of all the available options, see <a class="reference internal" href="../api/#api"><em>API documentation</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../api/" class="btn btn-neutral float-right" title="API documentation"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../" class="btn btn-neutral" title="Transit"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2013-2014 Dan Foreman-Mackey.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="../_static/js/analytics.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
