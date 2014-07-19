@@ -178,6 +178,16 @@ class Body(object):
                                "before getting the period.")
 
     @property
+    def r(self):
+        return self._r
+
+    @r.setter
+    def r(self, r):
+        if r < 0:
+            raise ValueError("Invalid planet radius (must be non-negative)")
+        self._r = r
+
+    @property
     def period(self):
         # If we already have a period, return that.
         if self._period is not None:
@@ -236,7 +246,7 @@ class Body(object):
         factor = 1.0
         e = self.e
         if e > 0.0:
-            factor = (1 - e * e) / (1 + e * np.sin(self.pomega))
+            factor = (1 - e * e) / (1 + e * np.sin(self.omega))
 
         return self.a * np.cos(incl) / rstar * factor
 
@@ -252,7 +262,7 @@ class Body(object):
         factor = 1.0
         e = self.e
         if e > 0.0:
-            factor = (1 + e * np.sin(self.pomega)) / (1 - e * e)
+            factor = (1 + e * np.sin(self.omega)) / (1 - e * e)
 
         arg = b * factor * rstar / self.a
         if arg > 1.0:
@@ -282,7 +292,8 @@ class Body(object):
         factor = self.period / math.pi
         e = self.e
         if e > 0.0:
-            factor *= math.sqrt(1 - e*e) / (1 + e * math.sin(self.pomega))
+            factor *= math.sqrt(1 - e*e)
+            factor /= 1 + e * math.sin(self.omega)
 
         return factor * math.asin(arg)
 
@@ -295,6 +306,14 @@ class Body(object):
         if not 0 <= e < 1.0:
             raise ValueError("Only bound orbits are permitted (0 <= e < 1)")
         self._e = e
+
+    @property
+    def omega(self, hp=0.5*np.pi):
+        return hp - self.pomega
+
+    @omega.setter
+    def omega(self, v, hp=0.5*np.pi):
+        self.pomga = hp - v
 
 
 class System(object):

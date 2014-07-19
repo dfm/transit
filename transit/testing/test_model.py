@@ -40,7 +40,7 @@ def test_impact():
     else:
         assert False, "This impact parameter is too large. Test should fail"
 
-    b0 = 0.2
+    b0 = 0.1
     body.b = b0
     assert np.allclose(body.b, b0), "Eccentric impact parameter failed"
 
@@ -97,27 +97,35 @@ def test_period():
                 "Massive body conversion failed for period {0}".format(p0)
 
 
-def _measure_duration(body, delta=1e-6):
-    body.t0 = 0.0
-
+def _measure_duration(nm, body, delta=5e-5):
     # Compute the positive duration.
-    t = np.arange(0, body.duration, delta)
+    t = np.arange(body.t0, body.t0 + body.duration, delta)
     lc = body.system.light_curve(t)
     plus = t[1 - lc == 0][0]
 
     # Compute the negative duration.
-    t = np.arange(0, -body.duration, -delta)
+    t = np.arange(body.t0, body.t0 - body.duration, -delta)
     lc = body.system.light_curve(t)
     minus = t[1 - lc == 0][0]
 
-    return plus - minus
+    err = np.abs((plus - minus) - body.duration)
+    assert err < 10*delta, "Duration test '{0}' failed.".format(nm)
 
 
 def test_duration():
     s = System(Central())
-    body = Body(period=10, r=0.01, e=0.1)
+    body = Body(period=10, r=0.01)
     s.add_body(body)
 
-    delta = np.abs(_measure_duration(body) - body.duration)
-    print(delta)
-    assert 0
+    # Basic tests.
+    for p in [1.0, 10.0, 100.0, 1e4]:
+        body.period = p
+        _measure_duration("period = {0}".format(p), body)
+    body.period = 10.0
+
+    # Eccentric tests. Remember that this will only be *approximate*.
+    for e in np.linspace(0, 0.5, 5):
+        body.e = e
+        for p in np.linspace(0, 2*np.pi, 11):
+            body.pomega = p
+            _measure_duration("e = {0}, pomega = {1}".format(e, p), body)
