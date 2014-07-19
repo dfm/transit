@@ -9,6 +9,7 @@ try:
 except ImportError:
     izip, imap = zip, map
 
+import math
 import numpy as np
 
 from ._transit import ldlc_kepler
@@ -133,7 +134,8 @@ class Body(object):
 
         .. math::
 
-            b = \frac{a}{R_\star} \tan i_x
+            b = \frac{a}{R_\star} \cos i_\mathrm{tot} \,
+                \left(\frac{1 - e^2}{1+e\,\sin \pomega} \right)
 
         (default: ``0.0``)
 
@@ -190,6 +192,8 @@ class Body(object):
 
     @period.setter
     def period(self, P):
+        if P <= 0.0:
+            raise ValueError("Invalid period (must be positive)")
         self._check_ps()
         mstar = self.system.central.mass
         self._a = (_G*P*P*(self.mass+mstar)/(4*np.pi*np.pi)) ** (1./3)
@@ -207,6 +211,16 @@ class Body(object):
         self._a = a
 
     @property
+    def incl(self):
+        self._check_ps()
+        return self.system.iobs - self.ix
+
+    @incl.setter
+    def incl(self, v):
+        self._check_ps()
+        self.ix = self.system.iobs - v
+
+    @property
     def b(self):
         # If we already have an impact parameter, return that.
         if self._b is not None:
@@ -216,13 +230,34 @@ class Body(object):
         # and then compute the impact parameter based on the star's radius.
         self._check_ps()
         rstar = self.system.central.radius
-        return self.a * np.tan(np.radians(self._ix)) / rstar
+        incl = np.radians(self.incl)
+
+        # Compute contribution due to eccentricity.
+        factor = 1.0
+        e = self.e
+        if e > 0.0:
+            factor = (1 - e * e) / (1 + e * np.sin(self.pomega))
+
+        return self.a * np.cos(incl) / rstar * factor
 
     @b.setter
     def b(self, b):
+        if b < 0.0:
+            raise ValueError("Invalid impact parameter (must be non-negative)")
+
         self._check_ps()
         rstar = self.system.central.radius
-        self._ix = np.degrees(np.arctan2(b, self.a / rstar))
+
+        # Compute contribution due to eccentricity.
+        factor = 1.0
+        e = self.e
+        if e > 0.0:
+            factor = (1 + e * np.sin(self.pomega)) / (1 - e * e)
+
+        arg = b * factor * rstar / self.a
+        if arg > 1.0:
+            raise ValueError("Invalid impact parameter")
+        self.incl = math.degrees(math.acos(arg))
         self._b = None
 
     @property
@@ -235,6 +270,31 @@ class Body(object):
     def ix(self, ix):
         self._b = None
         self._ix = ix
+
+    @property
+    def duration(self):
+        self._check_ps()
+        rstar = self.system.central.radius
+        k = self.r/rstar
+        si = math.sin(math.radians(self.incl))
+        arg = rstar / self.a * math.sqrt((1+k) ** 2 - self.b**2) / si
+
+        factor = self.period / math.pi
+        e = self.e
+        if e > 0.0:
+            factor *= math.sqrt(1 - e*e) / (1 + e * math.sin(self.pomega))
+
+        return factor * math.asin(arg)
+
+    @property
+    def e(self):
+        return self._e
+
+    @e.setter
+    def e(self, e):
+        if not 0 <= e < 1.0:
+            raise ValueError("Only bound orbits are permitted (0 <= e < 1)")
+        self._e = e
 
 
 class System(object):
@@ -290,13 +350,16 @@ class System(object):
              for p in self.bodies)
         return izip(*r)
 
-    def light_curve(self, t, texp=0.0, tol=0.1, maxdepth=3):
+    def light_curve(self, t, texp=0.0, tol=0.1, maxdepth=4):
         """
         Get the light curve evaluated at a list of times using the current
         model.
 
         :param t:
             The times where the light curve should be evaluated (in days).
+
+        :param tol:
+            The stopping criterion for the exposure time integration.
 
         """
         if len(self) == 0:
