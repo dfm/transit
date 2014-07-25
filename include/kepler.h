@@ -183,6 +183,60 @@ public:
         return lam + lp;
     };
 
+    void velocity (double t, int i, double vel[]) {
+        int info = 0, sgn;
+        double e = e_[i], a = a_[i],
+               dmanomdt = dmanomdt_[i],
+               t1 = t1s_[i],
+               cpomega = cpom_[i], spomega = spom_[i],
+               cix = cix_[i], six = six_[i], ciy = ciy_[i], siy = siy_[i],
+               manom, psi, cpsi, spsi, d, cth, sth, r, denom,
+               drdt, dthdt, dxdt, dydt, dxpdt, dypdt, dxsxdt;
+
+        manom = dmanomdt * (t - t1);
+        psi = kepler_mean_to_ecc_anomaly (manom, e, &info);
+
+        // Did solve fail?
+        if (info != 0) {
+            if (!status_) status_ = info;
+            return;
+        }
+
+        cpsi = cos(psi);
+        spsi = sin(psi);
+
+        // Compute the true anomaly.
+        d = 1.0 - e * cpsi;
+        if (d == 0.0){
+            if (!status_) status_ = 3;
+            return;
+        }
+        cth = (cpsi - e) / d;
+        sth = sqrt(1 - cth * cth);
+
+        // Compute the radius and derivative.
+        denom = 1.0 / (1 + e * cth);
+        r = a * (1 - e * e) * denom;
+        drdt = dmanomdt * a * e * sth / denom;
+        dthdt = dmanomdt * a * a * denom / r / r;
+
+        // Compute the coordinates in the plane of the orbit.
+        sgn = (spsi >= 0) - (spsi < 0);
+        dxdt = drdt * cth - r * sth * dthdt;
+        dydt = (drdt * sth + r * cth * dthdt) * sgn;
+
+        // Rotate the velocities.
+        dxpdt =  dxdt * cpomega + dydt * spomega;
+        dypdt = -dxdt * spomega + dydt * cpomega;
+        dxsxdt = dxpdt * six;
+
+        // Compute the velocities.
+        vel[0] = sgn * (dxpdt * cix);
+        vel[1] = sgn * (dypdt * ciy - dxsxdt * siy);
+        vel[2] = sgn * (dypdt * siy + dxsxdt * ciy);
+    };
+
+
 protected:
 
     int status_;
