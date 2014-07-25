@@ -44,6 +44,7 @@ cdef extern from "kepler.h" namespace "transit":
                       double iy)
         void position (const double t, const int i, double pos[])
         void velocity (const double t, const int i, double vel[])
+        double radial_velocity (const double t, const int i)
 
 
 cdef class PythonKeplerSolver:
@@ -66,73 +67,76 @@ cdef class PythonKeplerSolver:
     def add_body(self, double occ, double m, double r, double a, double t0,
                  double e, double pomega, double ix, double iy):
         cdef LimbDarkening* ld = new LimbDarkening()
-        self.thisptr.add_body (ld, occ, m, r, a, t0, e, pomega, ix, iy)
+        cdef int info
+        info = self.thisptr.add_body (ld, occ, m, r, a, t0, e, pomega, ix, iy)
+        if info:
+            raise RuntimeError("Couldn't add body.")
 
     @cython.boundscheck(False)
-    def get_position(self, np.ndarray[DTYPE_t, ndim=1] t, int ind):
-        cdef unsigned int i, j
+    def position(self, np.ndarray[DTYPE_t, ndim=1] t):
+        cdef unsigned int i, j, k
+        cdef unsigned int n = t.shape[0], K = self.thisptr.nbodies()
+
         cdef double value[3]
-        cdef int n = t.shape[0]
-        cdef np.ndarray[DTYPE_t, ndim=2] pos = np.zeros([n, 3], dtype=DTYPE)
+        cdef np.ndarray[DTYPE_t, ndim=3] pos = np.zeros([n, K, 3],
+                                                        dtype=DTYPE)
         for i in range(n):
-            self.thisptr.position(t[i], ind, value)
-            if self.status:
-                raise RuntimeError("Kepler solver failed with status {0}"
-                                   .format(self.status))
-            for j in range(3):
-                pos[i, j] = value[j]
+            for j in range(K):
+                self.thisptr.position(t[i], j, value)
+                if self.status:
+                    raise RuntimeError("Kepler solver failed with status {0}"
+                                    .format(self.status))
+                for k in range(3):
+                    pos[i, j, k] = value[k]
         return pos
 
     @cython.boundscheck(False)
-    def get_velocity(self, np.ndarray[DTYPE_t, ndim=1] t, int ind):
-        cdef unsigned int i, j
+    def velocity(self, np.ndarray[DTYPE_t, ndim=1] t):
+        cdef unsigned int i, j, k
+        cdef unsigned int n = t.shape[0], K = self.thisptr.nbodies()
+
         cdef double value[3]
-        cdef int n = t.shape[0]
-        cdef np.ndarray[DTYPE_t, ndim=2] vel = np.zeros([n, 3], dtype=DTYPE)
+        cdef np.ndarray[DTYPE_t, ndim=3] vel = np.zeros([n, K, 3],
+                                                        dtype=DTYPE)
         for i in range(n):
-            self.thisptr.velocity(t[i], ind, value)
-            if self.status:
-                raise RuntimeError("Kepler solver failed with status {0}"
-                                   .format(self.status))
-            for j in range(3):
-                vel[i, j] = value[j]
+            for j in range(K):
+                self.thisptr.velocity(t[i], j, value)
+                if self.status:
+                    raise RuntimeError("Kepler solver failed with status {0}"
+                                    .format(self.status))
+                for k in range(3):
+                    vel[i, j, k] = value[k]
         return vel
 
+    def light_curve(self, double f0, np.ndarray[DTYPE_t] t, double texp,
+                    double tol, int maxdepth):
+        cdef int i, N = t.shape[0]
 
-def ldlc_kepler (np.ndarray[DTYPE_t] t,
-                 double u1, double u2, double mstar, double rstar,
-                 np.ndarray[DTYPE_t] occ, np.ndarray[DTYPE_t] m,
-                 np.ndarray[DTYPE_t] r, np.ndarray[DTYPE_t] a,
-                 np.ndarray[DTYPE_t] t0, np.ndarray[DTYPE_t] e,
-                 np.ndarray[DTYPE_t] pomega, np.ndarray[DTYPE_t] ix,
-                 np.ndarray[DTYPE_t] iy,
-                 double texp, double tol, int maxdepth):
-    cdef int i, info, nplanets = occ.shape[0], N = t.shape[0]
+        # Define the integrator.
+        cdef Integrator[KeplerSolver[QuadraticLimbDarkening] ] integrator = \
+                Integrator[KeplerSolver[QuadraticLimbDarkening] ] \
+                    (self.thisptr, tol, maxdepth)
 
-    cdef GeometricLimbDarkening pld
-    cdef QuadraticLimbDarkening* ld = new QuadraticLimbDarkening(u1, u2)
-    cdef KeplerSolver[QuadraticLimbDarkening]* solver = \
-            new KeplerSolver[QuadraticLimbDarkening] (ld, mstar, rstar)
+        # Compute the integrated light curve.
+        cdef np.ndarray[DTYPE_t] lam = np.zeros(N, dtype=DTYPE)
+        for i in range(N):
+            lam[i] = f0 * integrator.integrate(t[i], texp)
+            if integrator.get_status():
+                raise RuntimeError("Integrator failed with status {0}"
+                                   .format(integrator.get_status()))
 
-    # Add the planets to the system.
-    for i in range(nplanets):
-        info = solver.add_body(&pld, occ[i], m[i], r[i], a[i], t0[i], e[i],
-                               pomega[i], ix[i], iy[i])
-        if info:
-            del solver
-            raise RuntimeError("Couldn't add body {0}".format(i))
+        return lam
 
-    cdef Integrator[KeplerSolver[QuadraticLimbDarkening] ] integrator = \
-            Integrator[KeplerSolver[QuadraticLimbDarkening] ](solver, tol,
-                                                              maxdepth)
-
-    # Compute the integrated light curve.
-    cdef np.ndarray[DTYPE_t] lam = np.zeros(N, dtype=DTYPE)
-    for i in range(N):
-        lam[i] = integrator.integrate(t[i], texp)
-        if integrator.get_status():
-            del solver
-            raise RuntimeError("Integrator failed with status {0}"
-                               .format(integrator.get_status()))
-
-    return lam
+    # @cython.boundscheck(False)
+    # def radial_velocity(self, np.ndarray[DTYPE_t, ndim=1] t):
+    #     cdef unsigned int i, j
+    #     cdef unsigned int n = t.shape[0], K = self.thisptr.nbodies()
+    #     cdef double value
+    #     cdef np.ndarray[DTYPE_t, ndim=2] vel = np.zeros([n, K], dtype=DTYPE)
+    #     for i in range(n):
+    #         for j in range(K):
+    #             vel[i, j] = self.thisptr.radial_velocity(t[i], j)
+    #             if self.status:
+    #                 raise RuntimeError("Kepler solver failed with status {0}"
+    #                                 .format(self.status))
+    #     return vel

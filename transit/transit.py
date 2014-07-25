@@ -12,11 +12,14 @@ except ImportError:
 import math
 import numpy as np
 
-from ._transit import ldlc_kepler
+from ._transit import PythonKeplerSolver as Solver
 
 
 # Newton's constant in $R_\odot^3 M_\odot^{-1} {days}^{-2}$.
 _G = 2945.4625385377644
+
+# A constant to convert between solar radii per day and m/s.
+_rvconv = 1.242271746944644082e-04
 
 
 class Central(object):
@@ -396,20 +399,14 @@ class System(object):
         body.system = self
         self.bodies.append(body)
 
-    def _get_pars(self):
-        """
-        Coerce the planetary parameters into the form needed by the
-        :func:`lightcurve` function. This function returns a list of the
-        following arrays
-
-        .. code-block:: python
-
-            flux, mass, r, a, t0, e, pomega, ix, iy
-
-        """
-        r = ((p.flux, p.mass, p.r, p.a, p.t0, p.e, p.pomega, p.ix, p.iy)
-             for p in self.bodies)
-        return izip(*r)
+    def _get_solver(self):
+        s = self.central
+        u1, u2 = s.coeffs
+        solver = Solver(u1, u2, s.mass, s.radius)
+        for p in self.bodies:
+            solver.add_body(p.flux, p.mass, p.r, p.a, p.t0, p.e, p.pomega,
+                            np.radians(90.-self.iobs+p.ix), np.radians(p.iy))
+        return solver
 
     def light_curve(self, t, texp=0.0, tol=0.1, maxdepth=4):
         """
@@ -429,17 +426,29 @@ class System(object):
         if len(self) == 0:
             return self.central.flux + np.zeros_like(t)
 
-        # Coerce the planetary orbital parameters.
-        pars = list(imap(np.atleast_1d, self._get_pars()))
-        flux, mass, r, a, t0, e, pomega, ix, iy = pars
-
         # Grab some shortcuts to some useful objects.
         s = self.central
         t = np.atleast_1d(t)
-        mu1, mu2 = s.coeffs
 
         # Compute the light curve using the Kepler solver.
-        lc = ldlc_kepler(t, mu1, mu2, s.mass, s.radius, flux, mass, r, a, t0,
-                         e, pomega, np.radians(90.-self.iobs+ix),
-                         np.radians(iy), texp, tol, maxdepth)
-        return s.flux * lc
+        return self._get_solver().light_curve(s.flux, t, texp, tol, maxdepth)
+
+    def radial_velocity(self, t):
+        """
+        Get the light curve evaluated at a list of times using the current
+        model.
+
+        :param t:
+            The times where the light curve should be evaluated (in days).
+
+        """
+        if len(self) == 0:
+            return np.zeros_like(t)
+
+        # Compute the mass ratios.
+        mr = np.array([b.mass for b in self.bodies]) / self.central.mass
+
+        # Compute the light curve using the Kepler solver.
+        rv = self._get_solver().radial_velocity(np.atleast_1d(t))
+        return -(rv / mr[None, :]).sum(axis=1)
+        # return -(rv * mr[None, :]).sum(axis=1)

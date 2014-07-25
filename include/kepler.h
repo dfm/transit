@@ -1,15 +1,19 @@
 #ifndef _KEPLER_H_
 #define _KEPLER_H_
 
-#include <cmath>
 #include <cfloat>
 #include <vector>
 #include <cstddef>
 
+#include "autodiff.h"
 #include "limb_darkening.h"
 
 #define KEPLER_MAX_ITER 200
 #define KEPLER_CONV_TOL 1.48e-10
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
 
 //
 // Newton's constant in $R_\odot^3 M_\odot^{-1} {days}^{-2}$.
@@ -18,11 +22,11 @@
 
 namespace transit {
 
-double kepler_ecc_to_mean_anomaly (double psi, double e) {
+double ecc_to_mean_anomaly (double psi, double e) {
     return psi - e * sin(psi);
 }
 
-double kepler_mean_to_ecc_anomaly (double M, double e, int *info) {
+double mean_to_ecc_anomaly (double M, double e, int *info) {
     int i;
     double wt0, psi0, psi = 0.0;
 
@@ -56,6 +60,58 @@ double kepler_mean_to_ecc_anomaly (double M, double e, int *info) {
     // If we get here, we didn't ever converge.
     *info = 1;
     return psi;
+}
+
+Jet<double> mean_to_ecc_anomaly (Jet<double> M, double e, int *info) {
+    double psi = mean_to_ecc_anomaly(M.a, e, info);
+    return Jet<double>(psi, M.v / (1 - e * cos(psi)));
+}
+
+double ecc_to_true_anomaly (double E, double e, int* info)
+{
+    double denom = 1. - e * cos(E);
+    if (denom <= 0.0) {
+        *info = -1;
+        return E;
+    }
+    double f = acos((cos(E) - e) / denom);
+    return f * sgn(sin(f)) * sgn(sin(E));
+}
+
+template <typename T>
+int solve_kepler (const T& manom, T* pos,
+                  const double a, const double e,
+                  const double sp, const double cp,
+                  const double six, const double cix,
+                  const double siy, const double ciy)
+{
+    int info;
+    T psi = mean_to_ecc_anomaly (manom, e, &info);
+
+    // Did solve fail?
+    if (info) return info;
+
+    // Compute the true anomaly.
+    T cpsi = cos(psi), spsi = sin(psi), d = 1.0 - e * cpsi;
+    if (d == 0.0) return 3;
+    T cth = (cpsi - e) / d, sth = sqrt(1.0 - cth * cth);
+
+    // Compute the radius and coordinates in the plane.
+    d = (1.0 + e * cth);
+    if (d == 0.0) return 3;
+    T r = a * (1.0 - e * e) / d,
+      x = r * cth,
+      y = r * sth * T(sgn(spsi));
+
+    // Rotate by pomega.
+    T xp =  x * cp + y * sp,
+      yp = -x * sp + y * cp;
+
+    // Compute the positions.
+    pos[0] = xp * cix;
+    pos[1] = yp * ciy - xp * six * siy;
+    pos[2] = yp * siy + xp * six * ciy;
+    return 0;
 }
 
 template <class L>
@@ -109,60 +165,29 @@ public:
         ciy_.push_back(cos(iy));
         siy_.push_back(sin(iy));
 
+        // Radial velocity term.
+        K_.push_back(pow(2* M_PI * G_GRAV / period, 1./3) * m * sin(ix)
+                     / (pow(m + mstar_, 2 / 3.) * sqrt(1 - e*e)));
+
         return 0;
     };
 
     void position (const double t, const int i, double pos[]) {
-        int info = 0, sgn;
-        double e = e_[i], a = a_[i],
-               dmanomdt = dmanomdt_[i],
-               t1 = t1s_[i],
-               cpomega = cpom_[i], spomega = spom_[i],
-               cix = cix_[i], six = six_[i], ciy = ciy_[i], siy = siy_[i],
-               manom, psi, cpsi, spsi, d, cth, sth, r, x, y, xp, yp, xsx,
-               denom;
+        double manom = dmanomdt_[i] * (t - t1s_[i]);
+        status_ = solve_kepler (manom, pos, a_[i], e_[i], spom_[i], cpom_[i],
+                                six_[i], cix_[i], siy_[i], ciy_[i]);
+    };
 
-        manom = dmanomdt * (t - t1);
-        psi = kepler_mean_to_ecc_anomaly (manom, e, &info);
+    void velocity (const double t, int i, double vel[]) {
+        Jet<double> manom(dmanomdt_[i] * (t - t1s_[i]), dmanomdt_[i]),
+                    res[3];
 
-        // Did solve fail?
-        if (info != 0) {
-            if (!status_) status_ = info;
-            return;
-        }
+        status_ = solve_kepler (manom, res, a_[i], e_[i], spom_[i], cpom_[i],
+                                six_[i], cix_[i], siy_[i], ciy_[i]);
 
-        cpsi = cos(psi);
-        spsi = sin(psi);
-
-        // Compute the true anomaly.
-        d = 1.0 - e * cpsi;
-        if (d == 0.0){
-            if (!status_) status_ = 3;
-            return;
-        }
-        cth = (cpsi - e) / d;
-        sth = sqrt(1 - cth * cth);
-
-        // Compute the radius and derivative.
-        denom = 1.0 / (1 + e * cth);
-        r = a * (1 - e * e) * denom;
-
-        // Compute the coordinates in the plane of the orbit.
-        sgn = (spsi >= 0) - (spsi < 0);
-        x = r * cth;
-        y = r * sth * sgn;
-
-        // Rotate by pomega.
-        xp =  x * cpomega + y * spomega;
-        yp = -x * spomega + y * cpomega;
-
-        // Rotate by the inclination angle.
-        xsx = xp * six;
-
-        // Compute the positions.
-        pos[0] = xp * cix;
-        pos[1] = yp * ciy - xsx * siy;
-        pos[2] = yp * siy + xsx * ciy;
+        vel[0] = res[0].v;
+        vel[1] = res[1].v;
+        vel[2] = res[2].v;
     };
 
     virtual double operator () (const double t) {
@@ -189,58 +214,16 @@ public:
         return lam + lp;
     };
 
-    void velocity (const double t, int i, double vel[]) {
-        int info = 0, sgn;
-        double e = e_[i], a = a_[i],
-               dmanomdt = dmanomdt_[i],
-               t1 = t1s_[i],
-               cpomega = cpom_[i], spomega = spom_[i],
-               cix = cix_[i], six = six_[i], ciy = ciy_[i], siy = siy_[i],
-               manom, psi, cpsi, spsi, d, cth, sth, r, denom,
-               drdt, dthdt, dxdt, dydt, dxpdt, dypdt, dxsxdt;
-
-        manom = dmanomdt * (t - t1);
-        psi = kepler_mean_to_ecc_anomaly (manom, e, &info);
-
-        // Did solve fail?
-        if (info != 0) {
-            if (!status_) status_ = info;
-            return;
-        }
-
-        cpsi = cos(psi);
-        spsi = sin(psi);
-
-        // Compute the true anomaly.
-        d = 1.0 - e * cpsi;
-        if (d == 0.0){
-            if (!status_) status_ = 3;
-            return;
-        }
-        cth = (cpsi - e) / d;
-        sth = sqrt(1 - cth * cth);
-
-        // Compute the radius and derivative.
-        denom = 1.0 / (1 + e * cth);
-        r = a * (1 - e * e) * denom;
-        drdt = dmanomdt * a * e * sth / denom;
-        dthdt = dmanomdt * a * a * denom / r / r;
-
-        // Compute the coordinates in the plane of the orbit.
-        sgn = (spsi >= 0) - (spsi < 0);
-        dxdt = drdt * cth - r * sth * dthdt;
-        dydt = (drdt * sth + r * cth * dthdt) * sgn;
-
-        // Rotate the velocities.
-        dxpdt =  dxdt * cpomega + dydt * spomega;
-        dypdt = -dxdt * spomega + dydt * cpomega;
-        dxsxdt = dxpdt * six;
-
-        // Compute the velocities.
-        vel[0] = sgn * (dxpdt * cix);
-        vel[1] = sgn * (dypdt * ciy - dxsxdt * siy);
-        vel[2] = sgn * (dypdt * siy + dxsxdt * ciy);
-    };
+    // double radial_velocity (const double t, int i) {
+    //     int info;
+    //     double e = e_[i], pomega = pomega_[i], spomega = spom_[i],
+    //            dmanomdt = dmanomdt_[i], t1 = t1s_[i],
+    //            manom = dmanomdt * (t - t1),
+    //            psi = mean_to_ecc_anomaly (manom, e, &info),
+    //            f = ecc_to_true_anomaly (psi, e),
+    //            K = K_[i];
+    //     return K * (sin(f+pomega) + e * spomega);
+    // }
 
 
 protected:
@@ -251,7 +234,7 @@ protected:
     std::vector<LimbDarkening*> pld_;
     std::vector<double> occ_, mp_, r_, ror_, iror_, a_, t0_, e_, pomega_, ix_,
                         iy_, periods_, dmanomdt_, t1s_, cpom_, spom_,
-                        cix_, six_, ciy_, siy_;
+                        cix_, six_, ciy_, siy_, K_;
 
 };
 
