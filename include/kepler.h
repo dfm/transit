@@ -1,6 +1,8 @@
 #ifndef _KEPLER_H_
 #define _KEPLER_H_
 
+#include <iostream>
+
 #include <cmath>
 #include <cfloat>
 #include <vector>
@@ -63,7 +65,7 @@ class KeplerSolver {
 
 public:
 
-    KeplerSolver (L ld, double mstar, double rstar)
+    KeplerSolver (L* ld, double mstar, double rstar)
         : ld_(ld), mstar_(mstar), rstar_(rstar)
     {
         status_ = 0;
@@ -71,6 +73,7 @@ public:
     };
 
     int get_status () const { return status_; };
+    int nbodies () const { return mp_.size(); };
 
     int add_body (LimbDarkening* ld, double occ, double m, double r, double a,
                   double t0, double e, double pomega, double ix, double iy)
@@ -172,7 +175,7 @@ public:
             // Is the body transiting or occulting.
             if (pos[0] > 0.0) {
                 // If transiting, use the stellar limb darkening profile.
-                lam *= ld_(ror_[i], z/rstar_);
+                lam *= (*ld_)(ror_[i], z/rstar_);
                 lp += occ_[i];
             } else if (occ_[i] > 0.0 && pld_[i] != NULL) {
                 // If occulting, use the planet's limb darkening profile.
@@ -240,7 +243,7 @@ public:
 protected:
 
     int status_;
-    L ld_;
+    L* ld_;
     double mstar_, rstar_, f0_;
     std::vector<LimbDarkening*> pld_;
     std::vector<double> occ_, mp_, r_, ror_, iror_, a_, t0_, e_, pomega_, ix_,
