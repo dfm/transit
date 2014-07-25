@@ -9,5 +9,6 @@ except NameError:
     __TRANSIT_SETUP__ = False
 
 if not __TRANSIT_SETUP__:
-    __all__ = ["System", "Central", "Body"]
-    from .transit import System, Central, Body
+    pass
+    # __all__ = ["System", "Central", "Body"]
+    # from .transit import System, Central, Body

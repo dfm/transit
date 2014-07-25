@@ -75,6 +75,7 @@ class build_ext(_build_ext):
 if __name__ == "__main__":
     import sys
     import numpy
+    from Cython.Build import cythonize
 
     # Publish the library to PyPI.
     if "publish" in sys.argv[-1]:
@@ -94,9 +95,10 @@ if __name__ == "__main__":
 
     # The source files.
     src = [
-        "transit/_transit.c",
+        "transit/_transit.pyx",
+        # "transit/_transit.c",
         "src/quad.cpp",
-        "src/driver.cpp",
+        # "src/driver.cpp",
     ]
 
     # Set up the extension.
@@ -121,7 +123,7 @@ if __name__ == "__main__":
         author_email="danfm@nyu.edu",
         packages=["transit"],
         py_modules=["transit.tests"],
-        ext_modules=[ext],
+        ext_modules=cythonize([ext]),
         url="http://github.com/dfm/transit",
         license="MIT",
         description="A Python library for computing the light curves of "

@@ -106,7 +106,7 @@ public:
         return 0;
     };
 
-    void solve (double t, int i, double pos[]) {
+    void position (const double t, const int i, double pos[]) {
         int info = 0, sgn;
         double e = e_[i], a = a_[i],
                dmanomdt = dmanomdt_[i],
@@ -159,12 +159,12 @@ public:
         pos[2] = yp * siy + xsx * ciy;
     };
 
-    virtual double operator () (double t) {
+    virtual double operator () (const double t) {
         int i, l = mp_.size();
         double z, lam = 1.0, lp = 0.0, pos[3] = {0, 0, 0};
         for (i = 0; i < l; ++i) {
             // Solve Kepler's equation for the position of the body.
-            solve(t, i, pos);
+            position(t, i, pos);
 
             // Find the impact parameter in the plane of the sky.
             z = sqrt(pos[1]*pos[1] + pos[2]*pos[2]);
@@ -183,7 +183,7 @@ public:
         return lam + lp;
     };
 
-    void velocity (double t, int i, double vel[]) {
+    void velocity (const double t, int i, double vel[]) {
         int info = 0, sgn;
         double e = e_[i], a = a_[i],
                dmanomdt = dmanomdt_[i],

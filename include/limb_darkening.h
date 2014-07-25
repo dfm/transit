@@ -39,6 +39,7 @@ public:
 
 class QuadraticLimbDarkening : public LimbDarkening {
 public:
+    QuadraticLimbDarkening () {};
     QuadraticLimbDarkening (double u1, double u2)
         : u1_(u1), u2_(u2) {};
     double operator () (double p, double z) const;
