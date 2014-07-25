@@ -28,6 +28,7 @@ p = solver.position(t+eps)
 m = solver.position(t-eps)
 vel = solver.velocity(t)
 print(vel - 0.5 * (p - m) / eps)
+assert 0
 
 # print((0.5 * (p - m) / eps, vel))
 
