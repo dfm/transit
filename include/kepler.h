@@ -1,8 +1,6 @@
 #ifndef _KEPLER_H_
 #define _KEPLER_H_
 
-#include <iostream>
-
 #include <cmath>
 #include <cfloat>
 #include <vector>
@@ -65,11 +63,16 @@ class KeplerSolver {
 
 public:
 
+    KeplerSolver () {};
     KeplerSolver (L* ld, double mstar, double rstar)
         : ld_(ld), mstar_(mstar), rstar_(rstar)
     {
         status_ = 0;
         f0_ = 1.0;
+    };
+
+    ~KeplerSolver () {
+        delete ld_;
     };
 
     int get_status () const { return status_; };

@@ -27,6 +27,6 @@ pl.plot(t, f, ".k")
 strt = time.time()
 f = s.light_curve(t, texp=0.2)
 print(time.time() - strt)
-pl.plot(t, f)
+pl.plot(t, f, ".r")
 
 pl.savefig("demo.pdf")

@@ -7,17 +7,18 @@ namespace transit {
 template <class S>
 class Integrator {
 public:
-    Integrator (S& solver, double tol, int maxdepth)
+    Integrator () {};
+    Integrator (S* solver, double tol, int maxdepth)
         : tol_(tol), maxdepth_(maxdepth), solver_(solver) {};
 
-    int get_status () const { return solver_.get_status(); };
+    int get_status () const { return solver_->get_status(); };
 
     double integrate (double f0, double t, double texp, int depth) {
         double st = texp/3.0,
                tp = t+st,
                tm = t-st,
-               fp = solver_(tp),
-               fm = solver_(tm),
+               fp = (*solver_)(tp),
+               fm = (*solver_)(tm),
                d = fabs((fp - 2*f0 + fm) / (fp - fm));
 
         if (d > tol_ && depth < maxdepth_) {
@@ -28,17 +29,17 @@ public:
         return (f0+fp+fm) / 3.0;
     };
 
-    double operator () (double t, double texp) {
+    double integrate (double t, double texp) {
         texp = fabs(texp);
         if (texp > 0)
-            return integrate(solver_(t), t, texp, 0);
-        return solver_(t);
+            return integrate((*solver_)(t), t, texp, 0);
+        return (*solver_)(t);
     };
 
 private:
     double tol_;
     int maxdepth_;
-    S& solver_;
+    S* solver_;
 };
 }
 
