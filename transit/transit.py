@@ -448,7 +448,10 @@ class System(object):
         # Compute the mass ratios.
         mr = np.array([b.mass for b in self.bodies]) / self.central.mass
 
-        # Compute the light curve using the Kepler solver.
-        rv = self._get_solver().radial_velocity(np.atleast_1d(t))
-        return -(rv / mr[None, :]).sum(axis=1)
+        vel = self._get_solver().velocity(np.atleast_1d(t))[:, :, 0]
+        return -_rvconv * (vel / mr[None, :]).sum(axis=1)
+
+        # # Compute the light curve using the Kepler solver.
+        # rv = self._get_solver().radial_velocity(np.atleast_1d(t))
+        # return -(rv / mr[None, :]).sum(axis=1)
         # return -(rv * mr[None, :]).sum(axis=1)

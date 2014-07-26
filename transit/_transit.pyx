@@ -126,17 +126,3 @@ cdef class PythonKeplerSolver:
                                    .format(integrator.get_status()))
 
         return lam
-
-    # @cython.boundscheck(False)
-    # def radial_velocity(self, np.ndarray[DTYPE_t, ndim=1] t):
-    #     cdef unsigned int i, j
-    #     cdef unsigned int n = t.shape[0], K = self.thisptr.nbodies()
-    #     cdef double value
-    #     cdef np.ndarray[DTYPE_t, ndim=2] vel = np.zeros([n, K], dtype=DTYPE)
-    #     for i in range(n):
-    #         for j in range(K):
-    #             vel[i, j] = self.thisptr.radial_velocity(t[i], j)
-    #             if self.status:
-    #                 raise RuntimeError("Kepler solver failed with status {0}"
-    #                                 .format(self.status))
-    #     return vel

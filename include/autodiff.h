@@ -2,6 +2,7 @@
 #define _AUTODIFF_H_
 
 #include <cmath>
+#include <cfloat>
 #include <iostream>
 
 namespace transit {
@@ -213,7 +214,7 @@ Jet<T> exp(const Jet<T>& f) {
 // sqrt(a + h) ~= sqrt(a) + h / (2 sqrt(a))
 template <typename T> inline
 Jet<T> sqrt(const Jet<T>& f) {
-    const T tmp = sqrt(f.a);
+    T tmp = sqrt(f.a);
     const T two_a_inverse = T(1.0) / (T(2.0) * tmp);
     return Jet<T>(tmp, f.v * two_a_inverse);
 }
@@ -323,9 +324,9 @@ Jet<T> pow(const Jet<T>& f, const Jet<T>& g) {
   return Jet<T>(tmp1, tmp2 * f.v + tmp3 * g.v);
 }
 
-template <typename T, int N>
+template <typename T>
 inline std::ostream &operator<<(std::ostream &s, const Jet<T>& z) {
-  return s << "[" << z.a << " ; " << z.v << "]";
+    return s << "[" << z.a << " ; " << z.v << "]";
 }
 
 };

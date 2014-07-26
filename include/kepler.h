@@ -1,6 +1,7 @@
 #ifndef _KEPLER_H_
 #define _KEPLER_H_
 
+#include <iostream>
 #include <cfloat>
 #include <vector>
 #include <cstddef>
@@ -12,7 +13,7 @@
 #define KEPLER_CONV_TOL 1.48e-10
 
 template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
+    return (T(0) <= val) - (val < T(0));
 }
 
 //
@@ -67,15 +68,17 @@ Jet<double> mean_to_ecc_anomaly (Jet<double> M, double e, int *info) {
     return Jet<double>(psi, M.v / (1 - e * cos(psi)));
 }
 
-double ecc_to_true_anomaly (double E, double e, int* info)
+template <typename T>
+void ecc_anomaly_to_cartesian (const double a, const double e, const T& psi,
+                               T* x, T* y)
 {
-    double denom = 1. - e * cos(E);
-    if (denom <= 0.0) {
-        *info = -1;
-        return E;
-    }
-    double f = acos((cos(E) - e) / denom);
-    return f * sgn(sin(f)) * sgn(sin(E));
+    double fp = sqrt(1.0 + e), fm = sqrt(1.0 - e), f0 = 1.0 - e*e;
+    T hpsi = 0.5 * psi, shp = sin(hpsi), chp = cos(hpsi),
+      theta = 2.0 * atan2(sqrt(1.0 - e) * chp, sqrt(1.0 + e) * shp),
+      cth = cos(theta),
+      factor = a * (e * e - 1.0) / (1.0 + e * cos(theta));
+    *x = factor * cth;
+    *y = factor * sin(theta);
 }
 
 template <typename T>
@@ -91,17 +94,9 @@ int solve_kepler (const T& manom, T* pos,
     // Did solve fail?
     if (info) return info;
 
-    // Compute the true anomaly.
-    T cpsi = cos(psi), spsi = sin(psi), d = 1.0 - e * cpsi;
-    if (d == 0.0) return 3;
-    T cth = (cpsi - e) / d, sth = sqrt(1.0 - cth * cth);
-
-    // Compute the radius and coordinates in the plane.
-    d = (1.0 + e * cth);
-    if (d == 0.0) return 3;
-    T r = a * (1.0 - e * e) / d,
-      x = r * cth,
-      y = r * sth * T(sgn(spsi));
+    // Convert to Cartesian coordinates.
+    T x, y;
+    ecc_anomaly_to_cartesian (a, e, psi, &x, &y);
 
     // Rotate by pomega.
     T xp =  x * cp + y * sp,
@@ -111,6 +106,7 @@ int solve_kepler (const T& manom, T* pos,
     pos[0] = xp * cix;
     pos[1] = yp * ciy - xp * six * siy;
     pos[2] = yp * siy + xp * six * ciy;
+
     return 0;
 }
 
@@ -153,11 +149,13 @@ public:
         iy_.push_back(iy);
 
         // Pre-compute some constant factors.
-        double period = 2 * M_PI * sqrt(a*a*a/G_GRAV/(mstar_+m)),
-               psi0 = 2 * atan2(tan(0.5 * pomega), sqrt((1 + e) / (1 - e)));
+        double period = 2.0 * M_PI * sqrt(a*a*a/G_GRAV/(mstar_+m)),
+               psi0 = atan2(sqrt(1.0 - e*e) * sin(pomega), e + cos(pomega)),
+               m0 = psi0 - e * sin(psi0),
+               factor = 2.0 * M_PI / period;
         periods_.push_back(period);
-        dmanomdt_.push_back(2 * M_PI / period);
-        t1s_.push_back(t0-0.5*period*(psi0 - e * sin(psi0)) / M_PI);
+        dmanomdt_.push_back(factor);
+        t1s_.push_back(t0 - m0 / factor);
         cpom_.push_back(cos(pomega));
         spom_.push_back(sin(pomega));
         cix_.push_back(cos(ix));
@@ -179,9 +177,8 @@ public:
     };
 
     void velocity (const double t, int i, double vel[]) {
-        Jet<double> manom(dmanomdt_[i] * (t - t1s_[i]), dmanomdt_[i]),
-                    res[3];
-
+        int info;
+        Jet<double> manom(dmanomdt_[i] * (t - t1s_[i]), dmanomdt_[i]), res[3];
         status_ = solve_kepler (manom, res, a_[i], e_[i], spom_[i], cpom_[i],
                                 six_[i], cix_[i], siy_[i], ciy_[i]);
 
