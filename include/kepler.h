@@ -150,8 +150,8 @@ public:
 
         // Pre-compute some constant factors.
         double period = 2.0 * M_PI * sqrt(a*a*a/G_GRAV/(mstar_+m)),
-               psi0 = 2 * atan2(sqrt(1.0 - e) * tan(0.5 * pomega), sqrt(1 + e)),
-               m0 = e * sin(psi0) - psi0,
+               psi0 = 2 * atan2(sqrt(1.0 - e) * tan(-0.5 * pomega), sqrt(1 + e)),
+               m0 = psi0 - e * sin(psi0),
                factor = 2.0 * M_PI / period;
         periods_.push_back(period);
         dmanomdt_.push_back(factor);
@@ -166,6 +166,13 @@ public:
         // Radial velocity term.
         K_.push_back(pow(2* M_PI * G_GRAV / period, 1./3) * m * sin(ix)
                      / (pow(m + mstar_, 2 / 3.) * sqrt(1 - e*e)));
+
+        int i = mp_.size() - 1;
+        double manom = dmanomdt_[i] * (t0 - t1s_[i]), pos[3];
+        std::cout << manom << " " << m0 << " " << psi0 << std::endl;
+        solve_kepler (manom, pos, a_[i], e_[i], spom_[i], cpom_[i], six_[i],
+                      cix_[i], siy_[i], ciy_[i]);
+        std::cout << pos[0] << " " << pos[1] << " " << pos[2] << "\n";
 
         return 0;
     };
@@ -210,18 +217,6 @@ public:
         }
         return lam + lp;
     };
-
-    // double radial_velocity (const double t, int i) {
-    //     int info;
-    //     double e = e_[i], pomega = pomega_[i], spomega = spom_[i],
-    //            dmanomdt = dmanomdt_[i], t1 = t1s_[i],
-    //            manom = dmanomdt * (t - t1),
-    //            psi = mean_to_ecc_anomaly (manom, e, &info),
-    //            f = ecc_to_true_anomaly (psi, e),
-    //            K = K_[i];
-    //     return K * (sin(f+pomega) + e * spomega);
-    // }
-
 
 protected:
 
