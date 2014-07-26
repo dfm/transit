@@ -150,8 +150,8 @@ public:
 
         // Pre-compute some constant factors.
         double period = 2.0 * M_PI * sqrt(a*a*a/G_GRAV/(mstar_+m)),
-               psi0 = atan2(sqrt(1.0 - e*e) * sin(pomega), e + cos(pomega)),
-               m0 = psi0 - e * sin(psi0),
+               psi0 = 2 * atan2(sqrt(1.0 - e) * tan(0.5 * pomega), sqrt(1 + e)),
+               m0 = e * sin(psi0) - psi0,
                factor = 2.0 * M_PI / period;
         periods_.push_back(period);
         dmanomdt_.push_back(factor);

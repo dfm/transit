@@ -14,8 +14,8 @@ import transit
 texp = EXPOSURE_TIMES[1] / 86400.0
 
 s = transit.System(transit.Central())
-body = transit.Body(r=0.02, mass=9e-4, period=3.0, t0=5, b=0.0, e=0.3,
-                    pomega=0.5)
+body = transit.Body(r=0.02, mass=9e-4, period=3.0, t0=5, b=0.0, e=0.0,
+                    pomega=1.5)
 s.add_body(body)
 
 t = np.linspace(0, 10.0, 1000)
