@@ -167,12 +167,12 @@ public:
         K_.push_back(pow(2* M_PI * G_GRAV / period, 1./3) * m * sin(ix)
                      / (pow(m + mstar_, 2 / 3.) * sqrt(1 - e*e)));
 
-        int i = mp_.size() - 1;
-        double manom = dmanomdt_[i] * (t0 - t1s_[i]), pos[3];
-        std::cout << manom << " " << m0 << " " << psi0 << std::endl;
-        solve_kepler (manom, pos, a_[i], e_[i], spom_[i], cpom_[i], six_[i],
-                      cix_[i], siy_[i], ciy_[i]);
-        std::cout << pos[0] << " " << pos[1] << " " << pos[2] << "\n";
+        /* int i = mp_.size() - 1; */
+        /* double manom = dmanomdt_[i] * (t0 - t1s_[i]), pos[3]; */
+        /* std::cout << manom << " " << m0 << " " << psi0 << std::endl; */
+        /* solve_kepler (manom, pos, a_[i], e_[i], spom_[i], cpom_[i], six_[i], */
+        /*               cix_[i], siy_[i], ciy_[i]); */
+        /* std::cout << pos[0] << " " << pos[1] << " " << pos[2] << "\n"; */
 
         return 0;
     };

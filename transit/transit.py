@@ -10,6 +10,7 @@ except ImportError:
     izip, imap = zip, map
 
 import math
+import logging
 import numpy as np
 
 from ._transit import PythonKeplerSolver as Solver
@@ -334,13 +335,11 @@ class Body(object):
         si = math.sin(math.radians(self.incl))
         arg = rstar / self.a * math.sqrt((1+k) ** 2 - self.b**2) / si
 
-        factor = self.period / math.pi
-        e = self.e
-        if e > 0.0:
-            factor *= math.sqrt(1 - e*e)
-            factor /= 1 + e * math.sin(self.omega)
+        if self.e > 0.0:
+            logging.warn("The duration of an eccentric transit isn't analytic."
+                         " Use this value with caution")
 
-        return factor * math.asin(arg)
+        return math.asin(arg) * self.period / math.pi
 
     @property
     def e(self):
@@ -351,14 +350,15 @@ class Body(object):
         if not 0 <= e < 1.0:
             raise ValueError("Only bound orbits are permitted (0 <= e < 1)")
         self._e = e
+        self._b = None
 
     @property
     def omega(self, hp=0.5*np.pi):
-        return hp - self.pomega
+        return self.pomega - hp
 
     @omega.setter
     def omega(self, v, hp=0.5*np.pi):
-        self.pomga = hp - v
+        self.pomga = v - hp
 
 
 class System(object):

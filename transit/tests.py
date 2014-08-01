@@ -33,13 +33,6 @@ def test_impact():
 
     # Eccentric orbit.
     body.e = 0.99
-    try:
-        body.b = 1.4
-    except ValueError:
-        pass
-    else:
-        assert False, "This impact parameter is too large. Test should fail"
-
     b0 = 0.1
     body.b = b0
     assert np.allclose(body.b, b0), "Eccentric impact parameter failed"
@@ -114,18 +107,12 @@ def _measure_duration(nm, body, delta=5e-5):
 
 def test_duration():
     s = System(Central())
-    body = Body(period=10, r=0.01)
+    body = Body(period=10, r=0.01, b=0.5)
     s.add_body(body)
 
     # Basic tests.
     for p in [1.0, 10.0, 100.0, 1e4]:
         body.period = p
+        body.b = 0.5
         _measure_duration("period = {0}".format(p), body)
     body.period = 10.0
-
-    # Eccentric tests. Remember that this will only be *approximate*.
-    for e in np.linspace(0, 0.5, 5):
-        body.e = e
-        for p in np.linspace(0, 2*np.pi, 11):
-            body.pomega = p
-            _measure_duration("e = {0}, pomega = {1}".format(e, p), body)
