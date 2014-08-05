@@ -72,7 +72,6 @@ template <typename T>
 void ecc_anomaly_to_cartesian (const double a, const double e, const T& psi,
                                T* x, T* y)
 {
-    double fp = sqrt(1.0 + e), fm = sqrt(1.0 - e), f0 = 1.0 - e*e;
     T hpsi = 0.5 * psi, shp = sin(hpsi), chp = cos(hpsi),
       theta = 2.0 * atan2(sqrt(1.0 - e) * chp, sqrt(1.0 + e) * shp),
       cth = cos(theta),
