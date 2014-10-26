@@ -11,4 +11,5 @@ User Guide
    :maxdepth: 2
 
    quickstart
+   fitting
    api
