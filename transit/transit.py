@@ -408,7 +408,7 @@ class System(object):
                             np.radians(90.-self.iobs+p.ix), np.radians(p.iy))
         return solver
 
-    def light_curve(self, t, texp=0.0, tol=0.1, maxdepth=4):
+    def light_curve(self, t, texp=0.0, tol=1e-8, maxdepth=4):
         """
         Get the light curve evaluated at a list of times using the current
         model.
