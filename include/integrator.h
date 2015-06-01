@@ -13,26 +13,27 @@ public:
 
     int get_status () const { return solver_->get_status(); };
 
-    double integrate (double f0, double t, double texp, int depth) {
-        double st = texp/3.0,
-               tp = t+st,
-               tm = t-st,
-               fp = (*solver_)(tp),
-               fm = (*solver_)(tm),
-               d = fabs((fp - 2*f0 + fm) / (fp - fm));
-
+    double integrate (double f1, double f2, double t1, double t2, int depth) {
+        double tmid = 0.5 * (t1 + t2),
+               fmid = (*solver_)(tmid),
+               fapprox = 0.5*(f1+f2),
+               d = fabs(fmid - fapprox);
         if (d > tol_ && depth < maxdepth_) {
-            fp = integrate(fp, tp, st, depth+1);
-            f0 = integrate(f0, t, st, depth+1);
-            fm = integrate(fm, tm, st, depth+1);
+            double a = integrate(f1, fmid, t1, tmid, depth+1),
+                   b = integrate(fmid, f2, tmid, t2, depth+1);
+            return a + b;
         }
-        return (f0+fp+fm) / 3.0;
+        return fapprox * (t2 - t1);
     };
 
     double integrate (double t, double texp) {
         texp = fabs(texp);
-        if (texp > 0)
-            return integrate((*solver_)(t), t, texp, 0);
+        if (texp > 0.0) {
+            double dt = 0.5*texp,
+                   t1 = t - dt,
+                   t2 = t + dt;
+            return integrate((*solver_)(t1), (*solver_)(t2), t1, t2, 0)/(t2-t1);
+        }
         return (*solver_)(t);
     };
 
