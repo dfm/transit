@@ -22,6 +22,9 @@ _G = 2945.4625385377644
 # A constant to convert between solar radii per day and m/s.
 _rvconv = 1.242271746944644082e-04
 
+#Solar mass & radius in cgs units
+_Msun = 1.9891e33
+_Rsun = 6.95508e10
 
 class Central(object):
     """
@@ -93,13 +96,17 @@ class Central(object):
 
     @property
     def density(self):
-        r = self.radius
-        return 0.75 * self.mass / (np.pi * r * r * r)
+        """Stellar density in CGS units
+        """
+        r = self.radius * _Rsun
+        m = self.mass * _Msun
+        return 0.75 * m / (np.pi * r * r * r)
 
     @density.setter
     def density(self, rho):
-        r = self.radius
-        self.mass = np.pi * rho * r * r * r / 0.75
+        r = self.radius * _Rsun
+        m = np.pi * rho * r * r * r / 0.75 
+        self.mass = m / _Msun
 
 
 class Body(object):
