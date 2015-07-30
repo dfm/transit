@@ -47,6 +47,46 @@ cdef extern from "kepler.h" namespace "transit":
         double radial_velocity (const double t, const int i)
 
 
+cdef extern from "solver.h" namespace "transit":
+
+    cdef cppclass SimpleSolver[L]:
+        SimpleSolver ()
+        SimpleSolver (L* ld, double period, double t0, double duration,
+                      double ror, double impact) except +
+
+
+cdef class PythonSimpleSolver:
+    cdef SimpleSolver[QuadraticLimbDarkening] *thisptr
+
+    def __cinit__(self, double u1, double u2, double period, double t0,
+                  double duration, double ror, double impact):
+        cdef QuadraticLimbDarkening* ld = new QuadraticLimbDarkening(u1, u2)
+        self.thisptr = new SimpleSolver[QuadraticLimbDarkening](
+            ld, period, t0, duration, ror, impact)
+
+    def __dealloc__(self):
+        del self.thisptr
+
+    def light_curve(self, double f0, np.ndarray[DTYPE_t] t, double texp,
+                    double tol, int maxdepth):
+        cdef int i, N = t.shape[0]
+
+        # Define the integrator.
+        cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator = \
+                Integrator[SimpleSolver[QuadraticLimbDarkening] ] \
+                    (self.thisptr, tol, maxdepth)
+
+        # Compute the integrated light curve.
+        cdef np.ndarray[DTYPE_t] lam = np.zeros(N, dtype=DTYPE)
+        for i in range(N):
+            lam[i] = f0 * integrator.integrate(t[i], texp)
+            if integrator.get_status():
+                raise RuntimeError("Integrator failed with status {0}"
+                                   .format(integrator.get_status()))
+
+        return lam
+
+
 cdef class PythonKeplerSolver:
     cdef KeplerSolver[QuadraticLimbDarkening] *thisptr
 
@@ -69,7 +109,7 @@ cdef class PythonKeplerSolver:
         cdef LimbDarkening* ld = new LimbDarkening()
         cdef int info
         info = self.thisptr.add_body (ld, occ, m, r, a, t0, e, pomega, ix, iy)
-        if info:
+        if info != 0:
             raise RuntimeError("Couldn't add body.")
 
     @cython.boundscheck(False)

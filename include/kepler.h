@@ -183,7 +183,6 @@ public:
     };
 
     void velocity (const double t, int i, double vel[]) {
-        int info;
         Jet<double> manom(dmanomdt_[i] * (t - t1s_[i]), dmanomdt_[i]), res[3];
         status_ = solve_kepler (manom, res, a_[i], e_[i], spom_[i], cpom_[i],
                                 six_[i], cix_[i], siy_[i], ciy_[i]);
@@ -193,7 +192,7 @@ public:
         vel[2] = res[2].v;
     };
 
-    virtual double operator () (const double t) {
+    double operator () (const double t) {
         int i, l = mp_.size();
         double z, lam = 1.0, lp = 0.0, pos[3] = {0, 0, 0};
         for (i = 0; i < l; ++i) {

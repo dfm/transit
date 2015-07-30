@@ -9,7 +9,8 @@ class SimpleSolver {
 
 public:
 
-    SimpleSolver (L ld, double period, double t0, double duration, double ror,
+    SimpleSolver () {};
+    SimpleSolver (L* ld, double period, double t0, double duration, double ror,
                   double impact)
         : ld_(ld), period_(period), t0_(t0), duration_(duration),
           ror_(ror), impact_(impact)
@@ -19,17 +20,20 @@ public:
         b2_ = impact_ * impact_;
         factor_ = 2.0 * sqrt(opr_*opr_ - b2_)/duration_;
     };
+    ~SimpleSolver () {
+        delete ld_;
+    };
 
     int get_status () const { return 0; };
 
     double operator () (double t) const {
         double x = factor_ * (fmod(t+hp_-t0_, period_)-hp_);
-        return ld_(ror_, sqrt(b2_ + x*x));
+        return (*ld_)(ror_, sqrt(b2_ + x*x));
     };
 
 private:
 
-    L ld_;
+    L* ld_;
     double period_, t0_, duration_, ror_, impact_;
     double opr_, b2_, hp_, factor_;
 
