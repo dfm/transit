@@ -4,6 +4,9 @@
 #include <cmath>
 
 namespace transit {
+
+inline double wrap (double x, double rng) { return x - rng * floor(x / rng); }
+
 template <class L>
 class SimpleSolver {
 
@@ -27,7 +30,7 @@ public:
     int get_status () const { return 0; };
 
     double operator () (double t) const {
-        double x = factor_ * (fmod(t+hp_-t0_, period_)-hp_);
+        double x = factor_ * (wrap(t+hp_-t0_, period_)-hp_);
         return (*ld_)(ror_, sqrt(b2_ + x*x));
     };
 
