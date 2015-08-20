@@ -6,6 +6,7 @@ addons:
     apt:
         packages:
             - libeigen3-dev
+            - libboost-all-dev
 
 language: python
 
@@ -19,7 +20,8 @@ env:
     - NUMPY_VERSION=1.9
 
 before_install:
-    - echo `pwd`
+    - wget http://ceres-solver.org/ceres-solver-1.10.0.tar.gz; \
+      tar -xf ceres-solver-1.10.0.tar.gz; mv ceres-solver-1.10.0 ceres
     - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
     - chmod +x miniconda.sh
     - ./miniconda.sh -b
