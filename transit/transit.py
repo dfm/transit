@@ -426,8 +426,8 @@ class System(object):
             params[n+3] = body.t0
             params[n+4] = body.e
             params[n+5] = body.pomega
-            params[n+6] = body.ix
-            params[n+7] = body.iy
+            params[n+6] = np.radians(90. - self.iobs + body.ix)
+            params[n+7] = np.radians(body.iy)
 
         return params
 

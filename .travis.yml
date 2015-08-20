@@ -20,8 +20,6 @@ env:
     - NUMPY_VERSION=1.9
 
 before_install:
-    - echo `which wget`
-    - echo `which tar`
     - wget http://ceres-solver.org/ceres-solver-1.10.0.tar.gz
     - tar -xf ceres-solver-1.10.0.tar.gz
     - mv ceres-solver-1.10.0 ceres
