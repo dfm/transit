@@ -50,6 +50,85 @@ def find_boost(hint=None, verbose=True):
     return None
 
 
+def find_eigen(hint=None):
+    """
+    Find the location of the Eigen 3 include directory. This will return
+    ``None`` on failure.
+
+    """
+    # List the standard locations including a user supplied hint.
+    search_dirs = [] if hint is None else hint
+    search_dirs += [
+        "/usr/local/include/eigen3",
+        "/usr/local/homebrew/include/eigen3",
+        "/opt/local/var/macports/software/eigen3",
+        "/opt/local/include/eigen3",
+        "/usr/include/eigen3",
+        "/usr/include/local",
+        "/usr/include",
+    ]
+
+    # Loop over search paths and check for the existence of the Eigen/Dense
+    # header.
+    for d in search_dirs:
+        path = os.path.join(d, "Eigen", "Dense")
+        if os.path.exists(path):
+            # Determine the version.
+            vf = os.path.join(d, "Eigen", "src", "Core", "util", "Macros.h")
+            if not os.path.exists(vf):
+                continue
+            src = open(vf, "r").read()
+            v1 = re.findall("#define EIGEN_WORLD_VERSION (.+)", src)
+            v2 = re.findall("#define EIGEN_MAJOR_VERSION (.+)", src)
+            v3 = re.findall("#define EIGEN_MINOR_VERSION (.+)", src)
+            if not len(v1) or not len(v2) or not len(v3):
+                continue
+            v = "{0}.{1}.{2}".format(v1[0], v2[0], v3[0])
+            print("Found Eigen version {0} in: {1}".format(v, d))
+            return d
+    return None
+
+
+def find_ceres(hint=None, verbose=True):
+    """
+    Find the location of the ceres include directory. This will return
+    ``None`` on failure.
+
+    """
+    # List the standard locations including a user supplied hint.
+    search_dirs = [] if hint is None else hint
+    search_dirs += [
+        "./ceres/include",
+        "/usr/local/include",
+        "/usr/local/homebrew/include",
+        "/opt/local/var/macports/software",
+        "/opt/local/include",
+        "/usr/include",
+        "/usr/include/local",
+    ]
+
+    # Loop over search paths and check for the existence of the required
+    # header.
+    for d in search_dirs:
+        path = os.path.join(d, "ceres", "jet.h")
+        if os.path.exists(path):
+            # Determine the version.
+            vf = os.path.join(d, "ceres", "version.h")
+            if not os.path.exists(vf):
+                continue
+            src = open(vf, "r").read()
+            v1 = re.findall("#define CERES_VERSION_MAJOR (.+)", src)
+            v2 = re.findall("#define CERES_VERSION_MINOR (.+)", src)
+            v3 = re.findall("#define CERES_VERSION_REVISION (.+)", src)
+            if not len(v1) or not len(v2) or not len(v3):
+                continue
+            v = "{0}.{1}.{2}".format(v1[0], v2[0], v3[0])
+            if verbose:
+                print("Found Ceres version {0} in: {1}".format(v, d))
+            return d
+    return None
+
+
 class build_ext(_build_ext):
     """
     A custom extension builder that finds the include directories for Boost.
@@ -65,8 +144,21 @@ class build_ext(_build_ext):
             raise RuntimeError("Required library Boost not found. "
                                "Check the documentation for solutions.")
 
+        # Look for the Eigen headers and make sure that we can find them.
+        eigen_include = find_eigen(hint=dirs)
+        if eigen_include is None:
+            raise RuntimeError("Required library Eigen not found. "
+                               "Check the documentation for solutions.")
+
+        # Look for the Ceres headers and make sure that we can find them.
+        ceres_include = find_ceres(hint=dirs)
+        if ceres_include is None:
+            raise RuntimeError("Required library Ceres not found. "
+                               "Check the documentation for solutions.")
+
         # Update the extension's include directories.
-        ext.include_dirs += [boost_include]
+        ext.include_dirs += [ceres_include, eigen_include, boost_include]
+        # boost_include, eigen_include, ceres_include]
 
         # Run the standard build procedure.
         _build_ext.build_extension(self, ext)
@@ -75,7 +167,6 @@ class build_ext(_build_ext):
 if __name__ == "__main__":
     import sys
     import numpy
-    from Cython.Build import cythonize
 
     # Publish the library to PyPI.
     if "publish" in sys.argv[-1]:
@@ -89,17 +180,19 @@ if __name__ == "__main__":
 
     # Specify the include directories.
     include_dirs = [
-        "include",
+        os.path.join("transit", "include"),
         numpy.get_include(),
     ]
 
-    # The source files.
-    src = [
-        "transit/_transit.pyx",
-        # "transit/_transit.c",
-        "src/quad.cpp",
-        # "src/driver.cpp",
-    ]
+    # Check for the Cython source (development mode) and compile it if it
+    # exists.
+    src = os.path.join("transit", "_transit")
+    if os.path.exists(src + ".pyx"):
+        from Cython.Build import cythonize
+        src = [src + ".pyx"]
+    else:
+        src = [src + ".cpp"]
+        cythonize = lambda x: x
 
     # Set up the extension.
     ext = Extension("transit._transit", sources=src,
@@ -129,7 +222,7 @@ if __name__ == "__main__":
         description="A Python library for computing the light curves of "
                     "transiting planets",
         long_description=desc,
-        package_data={"": ["README.rst", "LICENSE", "include/*.h", ]},
+        package_data={"": ["README.rst", "LICENSE", "transit/include/*.h", ]},
         include_package_data=True,
         cmdclass=dict(build_ext=build_ext),
         classifiers=[

@@ -2,6 +2,7 @@
 from __future__ import division
 
 cimport cython
+from libcpp.vector cimport vector
 
 import numpy as np
 cimport numpy as np
@@ -9,160 +10,155 @@ cimport numpy as np
 DTYPE = np.float64
 ctypedef np.float64_t DTYPE_t
 
-cdef extern from "limb_darkening.h" namespace "transit":
 
-    cdef cppclass LimbDarkening:
-        pass
-
-    cdef cppclass GeometricLimbDarkening(LimbDarkening):
-        pass
-
-    cdef cppclass QuadraticLimbDarkening(LimbDarkening):
+cdef extern from "quad.h" namespace "transit":
+    cdef cppclass QuadraticLimbDarkening:
         QuadraticLimbDarkening () except +
-        QuadraticLimbDarkening (double, double) except +
+
+
+cdef extern from *:
+    ctypedef int kepler_0 "5"
+    ctypedef int kepler_1 "5+8"
+    ctypedef int kepler_2 "5+8*2"
+    ctypedef int kepler_3 "5+8*3"
+    ctypedef int kepler_4 "5+8*4"
+    ctypedef int kepler_5 "5+8*5"
+    ctypedef int kepler_6 "5+8*6"
+    ctypedef int kepler_7 "5+8*7"
+    ctypedef int kepler_8 "5+8*8"
+    ctypedef int kepler_9 "5+8*9"
 
 
 cdef extern from "integrator.h" namespace "transit":
-
     cdef cppclass Integrator[S]:
         Integrator ()
-        Integrator (S*, double, int)
+        Integrator (double tol, int maxdepth)
         int get_status () const
-        double integrate (double f0, double t, double texp, int depth)
-        double integrate (double t, double texp)
+        S* get_solver ()
+        int integrate (const double* params, int nt, const double* t,
+                       double texp, double* lc)
+        int gradient[N](const double* params, int nt, const double* t,
+                        double texp, double* lc, double* gradient)
 
 
 cdef extern from "kepler.h" namespace "transit":
-
     cdef cppclass KeplerSolver[L]:
         KeplerSolver ()
-        KeplerSolver (L*, double, double) except +
         int get_status () const
-        int nbodies () const
-        int add_body (LimbDarkening*, double occ, double m, double r,
-                      double a, double t0, double e, double pomega, double ix,
-                      double iy)
+        void set_n_body (int n)
+        int get_n_body () const
         void position (const double t, const int i, double pos[])
-        void velocity (const double t, const int i, double vel[])
-        double radial_velocity (const double t, const int i)
+        void* reparameterize (const void* const params)
 
 
-cdef extern from "solver.h" namespace "transit":
+# cdef extern from "solver.h" namespace "transit":
 
-    cdef cppclass SimpleSolver[L]:
-        SimpleSolver ()
-        SimpleSolver (L* ld, double period, double t0, double duration,
-                      double ror, double impact) except +
-
-
-cdef class PythonSimpleSolver:
-    cdef SimpleSolver[QuadraticLimbDarkening] *thisptr
-
-    def __cinit__(self, double u1, double u2, double period, double t0,
-                  double duration, double ror, double impact):
-        cdef QuadraticLimbDarkening* ld = new QuadraticLimbDarkening(u1, u2)
-        self.thisptr = new SimpleSolver[QuadraticLimbDarkening](
-            ld, period, t0, duration, ror, impact)
-
-    def __dealloc__(self):
-        del self.thisptr
-
-    def light_curve(self, double f0, np.ndarray[DTYPE_t] t, double texp,
-                    double tol, int maxdepth):
-        cdef int i, N = t.shape[0]
-
-        # Define the integrator.
-        cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator = \
-                Integrator[SimpleSolver[QuadraticLimbDarkening] ] \
-                    (self.thisptr, tol, maxdepth)
-
-        # Compute the integrated light curve.
-        cdef np.ndarray[DTYPE_t] lam = np.zeros(N, dtype=DTYPE)
-        for i in range(N):
-            lam[i] = f0 * integrator.integrate(t[i], texp)
-            if integrator.get_status():
-                raise RuntimeError("Integrator failed with status {0}"
-                                   .format(integrator.get_status()))
-
-        return lam
+#     cdef cppclass SimpleSolver[L]:
+#         SimpleSolver ()
+#         SimpleSolver (L* ld, double period, double t0, double duration,
+#                       double ror, double impact) except +
 
 
-cdef class PythonKeplerSolver:
-    cdef KeplerSolver[QuadraticLimbDarkening] *thisptr
+# cdef class PythonSimpleSolver:
+#     cdef SimpleSolver[QuadraticLimbDarkening] *thisptr
 
-    def __cinit__(self, double u1, double u2, double mstar, double rstar):
-        cdef QuadraticLimbDarkening* ld = new QuadraticLimbDarkening(u1, u2)
-        self.thisptr = new KeplerSolver[QuadraticLimbDarkening](ld, mstar,
-                                                                rstar)
+#     def __cinit__(self, double u1, double u2, double period, double t0,
+#                   double duration, double ror, double impact):
+#         cdef QuadraticLimbDarkening* ld = new QuadraticLimbDarkening(u1, u2)
+#         self.thisptr = new SimpleSolver[QuadraticLimbDarkening](
+#             ld, period, t0, duration, ror, impact)
 
-    def __dealloc__(self):
-        del self.thisptr
+#     def __dealloc__(self):
+#         del self.thisptr
 
-    property status:
-        def __get__(self): return self.thisptr.get_status()
+#     def light_curve(self, double f0, np.ndarray[DTYPE_t] t, double texp,
+#                     double tol, int maxdepth):
+#         cdef int i, N = t.shape[0]
 
-    def __len__(self):
-        return self.thisptr.nbodies()
+#         # Define the integrator.
+#         cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator = \
+#             Integrator[SimpleSolver[QuadraticLimbDarkening] ] \
+#             (self.thisptr, tol, maxdepth)
 
-    def add_body(self, double occ, double m, double r, double a, double t0,
-                 double e, double pomega, double ix, double iy):
-        cdef LimbDarkening* ld = new LimbDarkening()
-        cdef int info
-        info = self.thisptr.add_body (ld, occ, m, r, a, t0, e, pomega, ix, iy)
-        if info != 0:
-            raise RuntimeError("Couldn't add body.")
+#         # Compute the integrated light curve.
+#         cdef np.ndarray[DTYPE_t] lam = np.zeros(N, dtype=DTYPE)
+#         for i in range(N):
+#             lam[i] = f0 * integrator.integrate(t[i], texp)
+#             if integrator.get_status():
+#                 raise RuntimeError("Integrator failed with status {0}"
+#                                    .format(integrator.get_status()))
 
-    @cython.boundscheck(False)
-    def position(self, np.ndarray[DTYPE_t, ndim=1] t):
-        cdef unsigned int i, j, k
-        cdef unsigned int n = t.shape[0], K = self.thisptr.nbodies()
+#         return lam
 
-        cdef double value[3]
-        cdef np.ndarray[DTYPE_t, ndim=3] pos = np.zeros([n, K, 3],
-                                                        dtype=DTYPE)
-        for i in range(n):
-            for j in range(K):
-                self.thisptr.position(t[i], j, value)
-                if self.status:
-                    raise RuntimeError("Kepler solver failed with status {0}"
-                                    .format(self.status))
-                for k in range(3):
-                    pos[i, j, k] = value[k]
-        return pos
 
-    @cython.boundscheck(False)
-    def velocity(self, np.ndarray[DTYPE_t, ndim=1] t):
-        cdef unsigned int i, j, k
-        cdef unsigned int n = t.shape[0], K = self.thisptr.nbodies()
+cdef class CythonSolver:
 
-        cdef double value[3]
-        cdef np.ndarray[DTYPE_t, ndim=3] vel = np.zeros([n, K, 3],
-                                                        dtype=DTYPE)
-        for i in range(n):
-            for j in range(K):
-                self.thisptr.velocity(t[i], j, value)
-                if self.status:
-                    raise RuntimeError("Kepler solver failed with status {0}"
-                                    .format(self.status))
-                for k in range(3):
-                    vel[i, j, k] = value[k]
-        return vel
-
-    def light_curve(self, double f0, np.ndarray[DTYPE_t] t, double texp,
-                    double tol, int maxdepth):
-        cdef int i, N = t.shape[0]
-
-        # Define the integrator.
+    def kepler_light_curve(self,
+                           int n_body,
+                           np.ndarray[DTYPE_t] params,
+                           np.ndarray[DTYPE_t] t,
+                           double texp, double tol, int maxdepth):
+        cdef double* reparams
         cdef Integrator[KeplerSolver[QuadraticLimbDarkening] ] integrator = \
-                Integrator[KeplerSolver[QuadraticLimbDarkening] ] \
-                    (self.thisptr, tol, maxdepth)
+            Integrator[KeplerSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
+        integrator.get_solver().set_n_body(n_body)
 
-        # Compute the integrated light curve.
-        cdef np.ndarray[DTYPE_t] lam = np.zeros(N, dtype=DTYPE)
-        for i in range(N):
-            lam[i] = f0 * integrator.integrate(t[i], texp)
-            if integrator.get_status():
-                raise RuntimeError("Integrator failed with status {0}"
-                                   .format(integrator.get_status()))
+        # Compute the light curve.
+        cdef np.ndarray[DTYPE_t] lc = np.empty(t.shape[0], dtype=DTYPE)
+        cdef int flag = integrator.integrate(<double*>params.data,
+                                             t.shape[0],
+                                             <double*>t.data,
+                                             texp,
+                                             <double*>lc.data)
 
-        return lam
+        return lc
+
+    def kepler_gradient(self,
+                        int n_body,
+                        np.ndarray[DTYPE_t] params,
+                        np.ndarray[DTYPE_t] t,
+                        double texp, double tol, int maxdepth):
+        cdef double* reparams
+        cdef Integrator[KeplerSolver[QuadraticLimbDarkening] ] integrator = \
+            Integrator[KeplerSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
+        integrator.get_solver().set_n_body(n_body)
+
+        # Compute the light curve.
+        cdef np.ndarray[DTYPE_t] lc = np.empty(t.shape[0], dtype=DTYPE)
+        cdef np.ndarray[DTYPE_t, ndim=2] gradient = \
+            np.empty((t.shape[0], params.shape[0]), dtype=DTYPE)
+
+        cdef int flag
+
+        if n_body == 0:
+            flag = integrator.gradient[kepler_0](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 1:
+            flag = integrator.gradient[kepler_1](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 2:
+            flag = integrator.gradient[kepler_2](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 3:
+            flag = integrator.gradient[kepler_3](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 4:
+            flag = integrator.gradient[kepler_4](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 5:
+            flag = integrator.gradient[kepler_5](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        else:
+            raise ValueError("You're a maniac. Don't take the gradient of a "
+                             "Kepler light curve with more than 5 planets!")
+
+        if flag:
+            raise RuntimeError("the solver failed with code={0}".format(flag))
+
+        return lc, gradient

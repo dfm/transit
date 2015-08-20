@@ -1,13 +1,14 @@
 #ifndef _TRANSIT_KEPLER_H_
 #define _TRANSIT_KEPLER_H_
 
-#include <iostream>
 #include <cfloat>
 #include <vector>
 #include <cstddef>
 
 #define KEPLER_MAX_ITER 200
 #define KEPLER_CONV_TOL 1.48e-10
+
+using std::vector;
 
 template <typename T> int sgn(T val) {
     return (T(0) <= val) - (val < T(0));
@@ -117,38 +118,72 @@ class KeplerSolver {
 
 public:
 
-    KeplerSolver () : nbodies_(0), status_(0), ld_() {};
-    KeplerSolver (int nbodies) : nbodies_(nbodies), status_(0), ld_() {};
+    KeplerSolver () : status_(0), n_body_(0), ld_() {};
     int get_status () const { return status_; };
 
-    void set_nbodies (int n) { nbodies_ = n; };
-    int get_nbodies () const { return nbodies_; };
+    void set_n_body (const int n) { n_body_ = n; };
+    int get_n_body () const { return n_body_; };
 
     template <typename T>
     void position (const T& m_central, const T* const params,
                    const double t, T* pos) {
-
         // Access the parameters.
-        T m_body = params[1],
-          a_body = params[2],
-          t0_body = params[3],
+        T a_body = params[2],
           e_body = params[4],
-          pomega_body = params[5],
-          ix_body = params[6],
-          iy_body = params[7];
-
-        // Compute the needed parameterizations.
-        T cpom = cos(pomega_body),
-          spom = sin(pomega_body),
-          cix = cos(ix_body),
-          six = sin(ix_body),
-          ciy = cos(iy_body),
-          siy = sin(iy_body),
-          psi0 = 2.0 * atan2(sqrt(1.0 - e_body) * tan(-0.5 * pomega_body), sqrt(1.0 + e_body)),
-          period_over_2pi = sqrt(a_body*a_body*a_body / (m_central+m_body) / G_GRAV),
-          manom = (t - t0_body) / period_over_2pi + psi0 - e_body * sin(psi0);
+          cpom = params[5],
+          spom = params[6],
+          cix = params[7],
+          six = params[8],
+          ciy = params[9],
+          siy = params[10],
+          manom = t * params[11] + params[12];
 
         status_ = solve_kepler (manom, a_body, e_body, spom, cpom, six, cix, siy, ciy, pos);
+    };
+
+    template <typename T>
+    T* reparameterize (const T* const params) const {
+        T* result = new T[5 + 13 * n_body_];
+        T m_central = params[2];
+
+        // Central parameters.
+        result[0] = params[0];
+        result[1] = params[1];
+        result[2] = params[2];
+        result[3+13*n_body_] = params[3+8*n_body_];
+        result[3+13*n_body_+1] = params[3+8*n_body_+1];
+
+        int i, j, n;
+        for (i = 0, j = 3, n = 3; i < n_body_; ++i, j += 8, n += 13) {
+            // Access the parameters.
+            T m_body = params[j + 1],
+              a_body = params[j + 2],
+              t0_body = params[j + 3],
+              e_body = params[j + 4],
+              pomega_body = params[j + 5],
+              ix_body = params[j + 6],
+              iy_body = params[j + 7],
+              psi0 = 2.0 * atan2(sqrt(1.0 - e_body) * tan(-0.5 * pomega_body), sqrt(1.0 + e_body)),
+              period_over_2pi = sqrt(a_body*a_body*a_body / (m_central+m_body) / G_GRAV);
+
+            result[n]   = params[j];
+            result[n+1] = m_body;
+            result[n+2] = a_body;
+            result[n+3] = t0_body;
+            result[n+4] = e_body;
+
+            result[n+5]  = cos(pomega_body);
+            result[n+6]  = sin(pomega_body);
+            result[n+7]  = cos(ix_body);
+            result[n+8]  = sin(ix_body);
+            result[n+9]  = cos(iy_body);
+            result[n+10] = sin(iy_body);
+
+            result[n+11] = 1.0 / period_over_2pi;
+            result[n+12] = -t0_body / period_over_2pi + psi0 - e_body * sin(psi0);
+        }
+
+        return result;
     };
 
     template <typename T>
@@ -157,13 +192,13 @@ public:
         // params:
         //
         //   [fstar, rstar, mstar] +
-        //   [r, m, a, t0, e, pomega, ix, iy] * nbodies_ +
+        //   [r, m, a, t0, e, pomega, ix, iy, ...] * N_BODY +
         //   limb darkening parameters
         //
 
-        int i, n, nld = 3 + 8 * nbodies_;
+        int i, n, nld = 3 + 13 * n_body_;
         T z, lam = params[0], pos[3] = {T(0.0), T(0.0), T(0.0)};
-        for (i = 0, n = 3; i < nbodies_; ++i, n += 8) {
+        for (i = 0, n = 3; i < n_body_; ++i, n += 13) {
             // Solve Kepler's equation for the position of the body.
             position(params[2], &(params[n]), t, pos);
 
@@ -180,7 +215,7 @@ public:
     };
 
 private:
-    int status_, nbodies_;
+    int status_, n_body_;
     L ld_;
 };
 

@@ -13,7 +13,7 @@ import math
 import logging
 import numpy as np
 
-from ._transit import PythonKeplerSolver as Solver
+from ._transit import CythonSolver
 
 
 # Newton's constant in $R_\odot^3 M_\odot^{-1} {days}^{-2}$.
@@ -22,9 +22,10 @@ _G = 2945.4625385377644
 # A constant to convert between solar radii per day and m/s.
 _rvconv = 1.242271746944644082e-04
 
-#Solar mass & radius in cgs units
+# Solar mass & radius in cgs units
 _Msun = 1.9891e33
 _Rsun = 6.95508e10
+
 
 class Central(object):
     """
@@ -105,7 +106,7 @@ class Central(object):
     @density.setter
     def density(self, rho):
         r = self.radius * _Rsun
-        m = np.pi * rho * r * r * r / 0.75 
+        m = np.pi * rho * r * r * r / 0.75
         self.mass = m / _Msun
 
 
@@ -407,13 +408,28 @@ class System(object):
         self.bodies.append(body)
 
     def _get_solver(self):
-        s = self.central
-        u1, u2 = s.coeffs
-        solver = Solver(u1, u2, s.mass, s.radius)
-        for p in self.bodies:
-            solver.add_body(p.flux, p.mass, p.r, p.a, p.t0, p.e, p.pomega,
-                            np.radians(90.-self.iobs+p.ix), np.radians(p.iy))
-        return solver
+        return CythonSolver()
+
+    def _get_params(self):
+        params = np.empty(5+8*len(self.bodies))
+        params[0] = self.central.flux
+        params[1] = self.central.radius
+        params[2] = self.central.mass
+        params[-2] = self.central.q1
+        params[-1] = self.central.q2
+
+        for i, body in enumerate(self.bodies):
+            n = 3 + 8 * i
+            params[n] = body.r
+            params[n+1] = body.mass
+            params[n+2] = body.a
+            params[n+3] = body.t0
+            params[n+4] = body.e
+            params[n+5] = body.pomega
+            params[n+6] = body.ix
+            params[n+7] = body.iy
+
+        return params
 
     def light_curve(self, t, texp=0.0, tol=1e-8, maxdepth=4):
         """
@@ -430,15 +446,38 @@ class System(object):
             The maximum recursion depth of the exposure time integrator.
 
         """
-        if len(self) == 0:
+        t = np.atleast_1d(t)
+        if len(self.bodies) == 0:
             return self.central.flux + np.zeros_like(t)
 
-        # Grab some shortcuts to some useful objects.
-        s = self.central
-        t = np.atleast_1d(t)
+        return CythonSolver().kepler_light_curve(len(self.bodies),
+                                                 self._get_params(),
+                                                 t, texp, tol, maxdepth)
 
-        # Compute the light curve using the Kepler solver.
-        return self._get_solver().light_curve(s.flux, t, texp, tol, maxdepth)
+    def light_gradient(self, t, texp=0.0, tol=1e-8, maxdepth=4):
+        """
+        Get the light curve evaluated at a list of times using the current
+        model.
+
+        :param t:
+            The times where the light curve should be evaluated (in days).
+
+        :param tol:
+            The stopping criterion for the exposure time integration.
+
+        :param maxdepth:
+            The maximum recursion depth of the exposure time integrator.
+
+        """
+        t = np.atleast_1d(t)
+        if len(self.bodies) == 0:
+            grad = np.zeros((len(t), 5), dtype=float)
+            grad[:, 0] = 1.0
+            return self.central.flux + np.zeros_like(t), grad
+
+        return CythonSolver().kepler_gradient(len(self.bodies),
+                                              self._get_params(),
+                                              t, texp, tol, maxdepth)
 
     def radial_velocity(self, t):
         """
