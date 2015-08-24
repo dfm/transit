@@ -117,3 +117,29 @@ def test_duration():
         body.b = 0.5
         _measure_duration("period = {0}".format(p), body)
     body.period = 10.0
+
+
+# def test_gradient(eps=1.345e-6, **kwargs):
+#     s = System(Central())
+#     s.add_body(Body(period=3.0, r=0.1, b=0.5, e=0.1, pomega=0.5))
+#     s.thaw_all_parameters()
+#     t = np.linspace(-5.0, 5.0, 500)
+#     g = s.get_gradient(t, **kwargs)
+
+#     vector = s.get_vector()
+#     names = s.get_parameter_names()
+#     for i, v in enumerate(vector):
+#         vector[i] = v + eps
+#         s.set_vector(vector)
+#         p = s.get_value(t, **kwargs)
+
+#         vector[i] = v - eps
+#         s.set_vector(vector)
+#         m = s.get_value(t, **kwargs)
+
+#         vector[i] = v
+#         s.set_vector(vector)
+
+#         n = names[i]
+#         assert np.allclose(0.5 * (p - m) / eps, g[:, i]), \
+#             "{0} ({1})".format(n, i)

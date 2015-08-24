@@ -391,9 +391,7 @@ class System(object):
         self.central.system = self
         self.bodies = []
         self.iobs = iobs
-
-    def __len__(self):
-        return len(self.bodies)
+        self.unfrozen = np.zeros(5, dtype=bool)
 
     def add_body(self, body):
         """
@@ -406,30 +404,12 @@ class System(object):
         """
         body.system = self
         self.bodies.append(body)
+        self.unfrozen = np.concatenate((
+            self.unfrozen[:-2], np.zeros(8, dtype=bool), self.unfrozen[-2:]
+        ))
 
     def _get_solver(self):
         return CythonSolver()
-
-    def _get_params(self):
-        params = np.empty(5+8*len(self.bodies))
-        params[0] = self.central.flux
-        params[1] = self.central.radius
-        params[2] = self.central.mass
-        params[-2] = self.central.q1
-        params[-1] = self.central.q2
-
-        for i, body in enumerate(self.bodies):
-            n = 3 + 8 * i
-            params[n] = body.r
-            params[n+1] = body.mass
-            params[n+2] = body.a
-            params[n+3] = body.t0
-            params[n+4] = body.e
-            params[n+5] = body.pomega
-            params[n+6] = np.radians(90. - self.iobs + body.ix)
-            params[n+7] = np.radians(body.iy)
-
-        return params
 
     def light_curve(self, t, texp=0.0, tol=1e-8, maxdepth=4):
         """
@@ -454,7 +434,7 @@ class System(object):
                                                  self._get_params(),
                                                  t, texp, tol, maxdepth)
 
-    def light_gradient(self, t, texp=0.0, tol=1e-8, maxdepth=4):
+    def light_curve_gradient(self, t, texp=0.0, tol=1e-8, maxdepth=4):
         """
         Get the light curve evaluated at a list of times using the current
         model.
@@ -479,25 +459,92 @@ class System(object):
                                               self._get_params(),
                                               t, texp, tol, maxdepth)
 
-    def radial_velocity(self, t):
-        """
-        Get the light curve evaluated at a list of times using the current
-        model.
+    def __len__(self):
+        return 5 + 8 * len(self.bodies)
 
-        :param t:
-            The times where the light curve should be evaluated (in days).
+    def _parameter_names(self):
+        names = ["central:ln_flux", "central:ln_radius", "central:ln_mass"]
+        for i, body in enumerate(self.bodies):
+            names += map("bodies[{0}]:{{0}}".format(i).format,
+                         ("ln_radius", "ln_mass", "t0",
+                          "e_cos_pom", "e_sin_pom",
+                          "a_cos_iy_cos_ix", "a_cos_iy_sin_ix", "a_sin_iy"))
+        names += ["central:q1", "central:q2"]
+        return names
 
-        """
-        if len(self) == 0:
-            return np.zeros_like(t)
+    def get_parameter_names(self):
+        return [n for n, f in zip(self._parameter_names(), self.unfrozen)
+                if f]
 
-        # Compute the mass ratios.
-        mr = np.array([b.mass for b in self.bodies]) / self.central.mass
+    def get_vector(self):
+        return self._get_params()[self.unfrozen]
 
-        vel = self._get_solver().velocity(np.atleast_1d(t))[:, :, 0]
-        return -_rvconv * (vel / mr[None, :]).sum(axis=1)
+    def _get_params(self):
+        params = np.empty(5+8*len(self.bodies))
+        params[0] = np.log(self.central.flux)
+        params[1] = np.log(self.central.radius)
+        params[2] = np.log(self.central.mass)
+        params[-2] = self.central.q1
+        params[-1] = self.central.q2
 
-        # # Compute the light curve using the Kepler solver.
-        # rv = self._get_solver().radial_velocity(np.atleast_1d(t))
-        # return -(rv / mr[None, :]).sum(axis=1)
-        # return -(rv * mr[None, :]).sum(axis=1)
+        for i, body in enumerate(self.bodies):
+            n = 3 + 8 * i
+            params[n] = np.log(body.r)
+            params[n+1] = np.log(max(body.mass, 1e-14))
+            params[n+2] = body.t0
+            params[n+3] = np.sqrt(body.e) * np.cos(body.pomega)
+            params[n+4] = np.sqrt(body.e) * np.cos(body.pomega)
+
+            sa = np.sqrt(body.a)
+            ix = np.radians(body.ix + 90.0 - self.iobs)
+            print("blah", ix, np.degrees(ix))
+            params[n+5] = sa * np.cos(ix)
+            params[n+6] = sa * np.sin(ix)
+            params[n+7] = np.radians(body.iy)
+
+        return params
+
+    def set_vector(self, vector):
+        params = self._get_params()
+        params[self.unfrozen] = vector
+        self.central.flux = np.exp(params[0])
+        self.central.radius = np.exp(params[1])
+        self.central.mass = np.exp(params[2])
+        self.central.q1 = params[-2]
+        self.central.q2 = params[-1]
+
+        for i, body in enumerate(self.bodies):
+            n = 3 + 8 * i
+
+            body.r = np.exp(params[n])
+            body.mass = np.exp(params[n+1])
+            body.t0 = params[n+2]
+
+            ecosp, esinp = params[n+3:n+5]
+            body.e = ecosp**2 + esinp**2
+            body.pomega = np.arctan2(esinp, ecosp)
+
+            ax, ay = params[n+5:n+7]
+            body.a = ax**2 + ay**2
+            body.ix = np.degrees(np.arctan2(ay, ax)) - 90.0 + self.iobs
+            body.iy = np.degrees(params[n+8])
+
+    def get_value(self, t, **kwargs):
+        return self.light_curve(t, **kwargs)
+
+    def get_gradient(self, t, **kwargs):
+        return self.light_curve_gradient(t, **kwargs)[1][:, self.unfrozen]
+
+    def freeze_parameter(self, parameter_name):
+        i = self._parameter_names().index(parameter_name)
+        self.unfrozen[i] = False
+
+    def thaw_parameter(self, parameter_name):
+        i = self._parameter_names().index(parameter_name)
+        self.unfrozen[i] = True
+
+    def freeze_all_parameters(self):
+        self.unfrozen[:] = False
+
+    def thaw_all_parameters(self):
+        self.unfrozen[:] = True

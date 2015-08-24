@@ -14,14 +14,23 @@ import transit
 texp = EXPOSURE_TIMES[1] / 86400.0
 
 s = transit.System(transit.Central())
-body = transit.Body(r=0.02, mass=9e-4, period=100.0, t0=5, b=0.0, e=0.4,
-                    pomega=np.pi)
+body = transit.Body(r=0.02, mass=0.0, period=100.0, t0=5, b=0.0, e=0.4,
+                    pomega=0.5*np.pi + 0.01)
 s.add_body(body)
 
 t = np.linspace(0, 10.0, 1000)
 
 fig, axes = pl.subplots(2, 1)
-solver = s._get_solver()
+
+strt = time.time()
+f = s.light_curve(t)
+print(time.time() - strt)
+pl.plot(t, f, "k")
+pl.gca().axvline(body.t0, color="k")
+pl.savefig("face.png")
+assert 0
+
+# solver = s._get_solver()
 # assert 0
 
 eps = 1e-7
@@ -39,7 +48,7 @@ print(np.abs(vel - 0.5 * (p - m) / eps).max())
 
 strt = time.time()
 f = s.light_curve(t)
-# print(time.time() - strt)
+print(time.time() - strt)
 axes[0].plot(t, f, "k")
 axes[0].axvline(body.t0, color="k")
 

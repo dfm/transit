@@ -67,7 +67,7 @@ Jet<T, N> mean_to_ecc_anomaly (Jet<T, N> M, Jet<T, N> e, int *info) {
     T psi = mean_to_ecc_anomaly(M.a, e.a, info);
     return Jet<T, N>(
         psi,
-        (M.v - e.v * sin(psi)) / (1.0 - e.a * cos(psi))
+        (M.v + e.v * sin(psi)) / (1.0 - e.a * cos(psi))
     );
 }
 
@@ -143,44 +143,72 @@ public:
 
     template <typename T>
     T* reparameterize (const T* const params) const {
+        //
+        // params:
+        //
+        //   [ln_fstar, ln_rstar, ln_mstar] +
+        //   [ln_r, ln_m, t0, sqrt(e)*cos(pomega), sqrt(e)*sin(pomega),
+        //    sqrt(a)*cos(ix), sqrt(a)*sin(ix), iy] * N_BODY +
+        //   [q_1, q_2]
+        //
+        //  (TODO: [ln(q_1 / (1 - q_1)), ln(q_2 / (1 - q_2))])
+        //
         T* result = new T[5 + 13 * n_body_];
-        T m_central = params[2];
+        T m_central = exp(params[2]);
 
         // Central parameters.
-        result[0] = params[0];
-        result[1] = params[1];
-        result[2] = params[2];
+        result[0] = exp(params[0]);
+        result[1] = exp(params[1]);
+        result[2] = m_central;
         result[3+13*n_body_] = params[3+8*n_body_];
         result[3+13*n_body_+1] = params[3+8*n_body_+1];
 
         int i, j, n;
         for (i = 0, j = 3, n = 3; i < n_body_; ++i, j += 8, n += 13) {
             // Access the parameters.
-            T m_body = params[j + 1],
-              a_body = params[j + 2],
-              t0_body = params[j + 3],
-              e_body = params[j + 4],
-              pomega_body = params[j + 5],
-              ix_body = params[j + 6],
-              iy_body = params[j + 7],
-              psi0 = 2.0 * atan2(sqrt(1.0 - e_body) * tan(-0.5 * pomega_body), sqrt(1.0 + e_body)),
-              period_over_2pi = sqrt(a_body*a_body*a_body / (m_central+m_body) / G_GRAV);
+            T m_body = exp(params[j + 1]),
+              t0_body = params[j + 2],
+              ecosp = params[j + 3],
+              esinp = params[j + 4],
+              acosi = params[j + 5],
+              asini = params[j + 6],
+              iy = params[j + 7],
+              e_body, sqrte, a_body, sqrta,
+              psi0, period_over_2pi;
 
-            result[n]   = params[j];
+            e_body = ecosp * ecosp + esinp * esinp;
+            a_body = acosi*acosi + asini*asini;
+            sqrta = sqrt(a_body);
+
+            period_over_2pi = sqrt(a_body*a_body*a_body / (m_central+m_body) / G_GRAV);
+
+            result[n]   = exp(params[j]);
             result[n+1] = m_body;
             result[n+2] = a_body;
             result[n+3] = t0_body;
-            result[n+4] = e_body;
 
-            result[n+5]  = cos(pomega_body);
-            result[n+6]  = sin(pomega_body);
-            result[n+7]  = cos(ix_body);
-            result[n+8]  = sin(ix_body);
-            result[n+9]  = cos(iy_body);
-            result[n+10] = sin(iy_body);
+            if (e_body > 0.0) {
+                sqrte = sqrt(e_body);
+                psi0 = 2.0 * atan2(-sqrt(1.0 - e_body) * esinp / (sqrte + ecosp),
+                                   sqrt(1.0 + e_body));
+                psi0 = psi0 - e_body * sin(psi0);
+                result[n+4] = e_body;
+                result[n+5]  = ecosp / sqrte;
+                result[n+6]  = esinp / sqrte;
+            } else {
+                psi0 = T(0.0);
+                result[n+4] = T(0.0);
+                result[n+5]  = T(1.0);
+                result[n+6]  = T(0.0);
+            }
+
+            result[n+7]  = acosi / sqrta;
+            result[n+8]  = asini / sqrta;
+            result[n+9]  = cos(iy);
+            result[n+10] = sin(iy);
 
             result[n+11] = 1.0 / period_over_2pi;
-            result[n+12] = -t0_body / period_over_2pi + psi0 - e_body * sin(psi0);
+            result[n+12] = -t0_body / period_over_2pi + psi0;
         }
 
         return result;
@@ -188,14 +216,6 @@ public:
 
     template <typename T>
     T operator () (const T* const params, const double t) {
-        //
-        // params:
-        //
-        //   [fstar, rstar, mstar] +
-        //   [r, m, a, t0, e, pomega, ix, iy, ...] * N_BODY +
-        //   limb darkening parameters
-        //
-
         int i, n, nld = 3 + 13 * n_body_;
         T z, lam = params[0], pos[3] = {T(0.0), T(0.0), T(0.0)};
         for (i = 0, n = 3; i < n_body_; ++i, n += 13) {
