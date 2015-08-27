@@ -1,0 +1,3 @@
+These headers are taken directly from the BSD-licensed Ceres code base
+(http://ceres-solver.org/). See the files for the license. These are the
+headers required for automatic differentiation.

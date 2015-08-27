@@ -89,46 +89,6 @@ def find_eigen(hint=None):
     return None
 
 
-def find_ceres(hint=None, verbose=True):
-    """
-    Find the location of the ceres include directory. This will return
-    ``None`` on failure.
-
-    """
-    # List the standard locations including a user supplied hint.
-    search_dirs = [] if hint is None else hint
-    search_dirs += [
-        "./ceres/include",
-        "/usr/local/include",
-        "/usr/local/homebrew/include",
-        "/opt/local/var/macports/software",
-        "/opt/local/include",
-        "/usr/include",
-        "/usr/include/local",
-    ]
-
-    # Loop over search paths and check for the existence of the required
-    # header.
-    for d in search_dirs:
-        path = os.path.join(d, "ceres", "jet.h")
-        if os.path.exists(path):
-            # Determine the version.
-            vf = os.path.join(d, "ceres", "version.h")
-            if not os.path.exists(vf):
-                continue
-            src = open(vf, "r").read()
-            v1 = re.findall("#define CERES_VERSION_MAJOR (.+)", src)
-            v2 = re.findall("#define CERES_VERSION_MINOR (.+)", src)
-            v3 = re.findall("#define CERES_VERSION_REVISION (.+)", src)
-            if not len(v1) or not len(v2) or not len(v3):
-                continue
-            v = "{0}.{1}.{2}".format(v1[0], v2[0], v3[0])
-            if verbose:
-                print("Found Ceres version {0} in: {1}".format(v, d))
-            return d
-    return None
-
-
 class build_ext(_build_ext):
     """
     A custom extension builder that finds the include directories for Boost.
@@ -150,14 +110,8 @@ class build_ext(_build_ext):
             raise RuntimeError("Required library Eigen not found. "
                                "Check the documentation for solutions.")
 
-        # Look for the Ceres headers and make sure that we can find them.
-        ceres_include = find_ceres(hint=dirs)
-        if ceres_include is None:
-            raise RuntimeError("Required library Ceres not found. "
-                               "Check the documentation for solutions.")
-
         # Update the extension's include directories.
-        ext.include_dirs += [ceres_include, eigen_include, boost_include]
+        ext.include_dirs += [eigen_include, boost_include]
         # boost_include, eigen_include, ceres_include]
 
         # Run the standard build procedure.
