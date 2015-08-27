@@ -9,9 +9,13 @@ using ceres::Jet;
 namespace transit {
 
 inline double wrap (double x, double rng) { return x - rng * floor(x / rng); }
-template <typename T, int N>
-Jet<T, N> wrap (const Jet<T, N>& x, const Jet<T, N>& rng) {
-    return Jet<T, N>(wrap(x.a, rng.a), x.v);
+
+template <typename T>
+T wrap (const T x, const T rng) {
+    T y = x;
+    while (y >= rng) y = y - rng;
+    while (y < T(0.0)) y = y + rng;
+    return y;
 }
 
 template <class L>
@@ -24,17 +28,29 @@ public:
     L& get_limb_darkening () { return ld_; };
 
     template <typename T>
+    T* reparameterize (const T* const params) const {
+        T* result = new T[7];
+        T ror = exp(params[0]), rorp1 = 1.0 + ror;
+        result[0] = ror;
+        result[1] = exp(params[1]);
+        result[2] = params[2];
+        result[3] = params[3] * params[3];
+        result[4] = exp(params[5]) / (1.0 + exp(params[5]));
+        result[5] = exp(params[6]) / (1.0 + exp(params[6]));
+        result[6] = 2.0 * sqrt(rorp1 * rorp1 - result[3]) / exp(params[4]);
+        return result;
+    }
+
+    template <typename T>
     T operator () (const T* const params, const double t) const {
         T ror = params[0],
-          one_plus_ror = 1.0 + ror,
           period = params[1],
           t0 = params[2],
+          b2 = params[3],
+          factor = params[6],
           half_period = 0.5 * period,
-          b2 = params[3] * params[3],
-          duration = params[4],
-          factor = 2.0 * sqrt(one_plus_ror * one_plus_ror - b2)/duration,
-          x = factor * (wrap(t+half_period - t0, period) - half_period);
-        return ld_(&(params[5]), ror, sqrt(b2 + x*x));
+          x = factor * (wrap(t + half_period - t0, period) - half_period);
+        return ld_(&(params[4]), ror, sqrt(b2 + x*x));
     };
 
 private:

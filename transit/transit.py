@@ -453,22 +453,23 @@ class System(object):
         if len(self.bodies) == 0:
             grad = np.zeros((len(t), 5), dtype=float)
             grad[:, 0] = 1.0
-            return self.central.flux + np.zeros_like(t), grad
+            return self.central.flux + np.zeros_like(t), grad[:, self.unfrozen]
 
-        return CythonSolver().kepler_gradient(len(self.bodies),
-                                              self._get_params(),
-                                              t, texp, tol, maxdepth)
+        f, df = CythonSolver().kepler_gradient(len(self.bodies),
+                                               self._get_params(),
+                                               t, texp, tol, maxdepth)
+        return f, df[:, self.unfrozen]
 
     def __len__(self):
-        return 5 + 8 * len(self.bodies)
+        return np.sum(self.unfrozen)
 
     def _parameter_names(self):
         names = ["central:ln_flux", "central:ln_radius", "central:ln_mass"]
         for i, body in enumerate(self.bodies):
             names += map("bodies[{0}]:{{0}}".format(i).format,
                          ("ln_radius", "ln_mass", "t0",
-                          "e_cos_pom", "e_sin_pom",
-                          "a_cos_iy_cos_ix", "a_cos_iy_sin_ix", "a_sin_iy"))
+                          "sqrt_e_cos_pom", "sqrt_e_sin_pom",
+                          "sqrt_a_cos_i", "sqrt_a_sin_i", "iy"))
         names += ["central:q1", "central:q2"]
         return names
 
@@ -493,11 +494,10 @@ class System(object):
             params[n+1] = np.log(max(body.mass, 1e-14))
             params[n+2] = body.t0
             params[n+3] = np.sqrt(body.e) * np.cos(body.pomega)
-            params[n+4] = np.sqrt(body.e) * np.cos(body.pomega)
+            params[n+4] = np.sqrt(body.e) * np.sin(body.pomega)
 
             sa = np.sqrt(body.a)
             ix = np.radians(body.ix + 90.0 - self.iobs)
-            print("blah", ix, np.degrees(ix))
             params[n+5] = sa * np.cos(ix)
             params[n+6] = sa * np.sin(ix)
             params[n+7] = np.radians(body.iy)
@@ -533,7 +533,7 @@ class System(object):
         return self.light_curve(t, **kwargs)
 
     def get_gradient(self, t, **kwargs):
-        return self.light_curve_gradient(t, **kwargs)[1][:, self.unfrozen]
+        return self.light_curve_gradient(t, **kwargs)[1]
 
     def freeze_parameter(self, parameter_name):
         i = self._parameter_names().index(parameter_name)

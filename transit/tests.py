@@ -6,6 +6,7 @@ __all__ = ["test_impact", "test_period"]
 
 import numpy as np
 from .transit import Body, Central, System
+from .simple import SimpleSystem
 
 
 def test_impact():
@@ -101,7 +102,6 @@ def _measure_duration(nm, body, delta=5e-5):
     lc = body.system.light_curve(t)
     minus = t[1 - lc == 0][0]
 
-    print(plus - minus, body.duration)
     err = np.abs((plus - minus) - body.duration)
     assert err < 10*delta, "Duration test '{0}' failed.".format(nm)
 
@@ -119,27 +119,39 @@ def test_duration():
     body.period = 10.0
 
 
-# def test_gradient(eps=1.345e-6, **kwargs):
-#     s = System(Central())
-#     s.add_body(Body(period=3.0, r=0.1, b=0.5, e=0.1, pomega=0.5))
-#     s.thaw_all_parameters()
-#     t = np.linspace(-5.0, 5.0, 500)
-#     g = s.get_gradient(t, **kwargs)
+def _test_gradient(s, eps=1.345e-6, **kwargs):
+    t = np.linspace(-5.0, 5.0, 500)
+    g = s.get_gradient(t, **kwargs)
+    assert np.any(np.abs(g) > 0.0)
 
-#     vector = s.get_vector()
-#     names = s.get_parameter_names()
-#     for i, v in enumerate(vector):
-#         vector[i] = v + eps
-#         s.set_vector(vector)
-#         p = s.get_value(t, **kwargs)
+    vector = s.get_vector()
+    names = s.get_parameter_names()
+    for i, v in enumerate(vector):
+        vector[i] = v + eps
+        s.set_vector(vector)
+        p = s.get_value(t, **kwargs)
 
-#         vector[i] = v - eps
-#         s.set_vector(vector)
-#         m = s.get_value(t, **kwargs)
+        vector[i] = v - eps
+        s.set_vector(vector)
+        m = s.get_value(t, **kwargs)
 
-#         vector[i] = v
-#         s.set_vector(vector)
+        vector[i] = v
+        s.set_vector(vector)
 
-#         n = names[i]
-#         assert np.allclose(0.5 * (p - m) / eps, g[:, i]), \
-#             "{0} ({1})".format(n, i)
+        n = names[i]
+        assert np.allclose(0.5 * (p - m) / eps, g[:, i]), \
+            "{0} ({1})".format(n, i)
+
+
+def test_kepler_gradient(**kwargs):
+    s = System(Central())
+    s.add_body(Body(period=3.0, mass=0.1, r=0.1, b=0.5, e=0.1, pomega=0.5,
+                    iy=45.))
+    s.thaw_all_parameters()
+    _test_gradient(s, **kwargs)
+
+
+def test_simple_gradient(**kwargs):
+    s = SimpleSystem(period=3.0, ror=0.1, impact=0.5, duration=0.1)
+    s.thaw_all_parameters()
+    _test_gradient(s, **kwargs)

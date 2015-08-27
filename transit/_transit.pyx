@@ -17,6 +17,7 @@ cdef extern from "quad.h" namespace "transit":
 
 
 cdef extern from *:
+    ctypedef int simple_type "7"
     ctypedef int kepler_0 "5"
     ctypedef int kepler_1 "5+8"
     ctypedef int kepler_2 "5+8*2"
@@ -47,51 +48,59 @@ cdef extern from "kepler.h" namespace "transit":
         int get_status () const
         void set_n_body (int n)
         int get_n_body () const
-        void position (const double t, const int i, double pos[])
         void* reparameterize (const void* const params)
 
 
-# cdef extern from "solver.h" namespace "transit":
-
-#     cdef cppclass SimpleSolver[L]:
-#         SimpleSolver ()
-#         SimpleSolver (L* ld, double period, double t0, double duration,
-#                       double ror, double impact) except +
-
-
-# cdef class PythonSimpleSolver:
-#     cdef SimpleSolver[QuadraticLimbDarkening] *thisptr
-
-#     def __cinit__(self, double u1, double u2, double period, double t0,
-#                   double duration, double ror, double impact):
-#         cdef QuadraticLimbDarkening* ld = new QuadraticLimbDarkening(u1, u2)
-#         self.thisptr = new SimpleSolver[QuadraticLimbDarkening](
-#             ld, period, t0, duration, ror, impact)
-
-#     def __dealloc__(self):
-#         del self.thisptr
-
-#     def light_curve(self, double f0, np.ndarray[DTYPE_t] t, double texp,
-#                     double tol, int maxdepth):
-#         cdef int i, N = t.shape[0]
-
-#         # Define the integrator.
-#         cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator = \
-#             Integrator[SimpleSolver[QuadraticLimbDarkening] ] \
-#             (self.thisptr, tol, maxdepth)
-
-#         # Compute the integrated light curve.
-#         cdef np.ndarray[DTYPE_t] lam = np.zeros(N, dtype=DTYPE)
-#         for i in range(N):
-#             lam[i] = f0 * integrator.integrate(t[i], texp)
-#             if integrator.get_status():
-#                 raise RuntimeError("Integrator failed with status {0}"
-#                                    .format(integrator.get_status()))
-
-#         return lam
+cdef extern from "simple.h" namespace "transit":
+    cdef cppclass SimpleSolver[L]:
+        SimpleSolver ()
+        int get_status () const
+        void* reparameterize (const void* const params)
 
 
 cdef class CythonSolver:
+
+    def simple_light_curve(self,
+                           np.ndarray[DTYPE_t] params,
+                           np.ndarray[DTYPE_t] t,
+                           double texp, double tol, int maxdepth):
+        cdef double* reparams
+        cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator = \
+            Integrator[SimpleSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
+
+        # Compute the light curve.
+        cdef np.ndarray[DTYPE_t] lc = np.empty(t.shape[0], dtype=DTYPE)
+        cdef int flag = integrator.integrate(<double*>params.data,
+                                             t.shape[0],
+                                             <double*>t.data,
+                                             texp,
+                                             <double*>lc.data)
+
+        return lc
+
+    def simple_gradient(self,
+                        np.ndarray[DTYPE_t] params,
+                        np.ndarray[DTYPE_t] t,
+                        double texp, double tol, int maxdepth):
+        cdef double* reparams
+        cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator = \
+            Integrator[SimpleSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
+
+        # Compute the light curve.
+        cdef np.ndarray[DTYPE_t] lc = np.empty(t.shape[0], dtype=DTYPE)
+        cdef np.ndarray[DTYPE_t, ndim=2] gradient = \
+            np.empty((t.shape[0], params.shape[0]), dtype=DTYPE)
+
+        cdef int flag
+
+        flag = integrator.gradient[simple_type](
+            <double*>params.data, t.shape[0], <double*>t.data, texp,
+            <double*>lc.data, <double*>gradient.data)
+
+        if flag:
+            raise RuntimeError("the solver failed with code={0}".format(flag))
+
+        return lc, gradient
 
     def kepler_light_curve(self,
                            int n_body,
@@ -138,22 +147,22 @@ cdef class CythonSolver:
             flag = integrator.gradient[kepler_1](
                 <double*>params.data, t.shape[0], <double*>t.data, texp,
                 <double*>lc.data, <double*>gradient.data)
-        elif n_body == 2:
-            flag = integrator.gradient[kepler_2](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
-        elif n_body == 3:
-            flag = integrator.gradient[kepler_3](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
-        elif n_body == 4:
-            flag = integrator.gradient[kepler_4](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
-        elif n_body == 5:
-            flag = integrator.gradient[kepler_5](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 2:
+        #     flag = integrator.gradient[kepler_2](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 3:
+        #     flag = integrator.gradient[kepler_3](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 4:
+        #     flag = integrator.gradient[kepler_4](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 5:
+        #     flag = integrator.gradient[kepler_5](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
         else:
             raise ValueError("You're a maniac. Don't take the gradient of a "
                              "Kepler light curve with more than 5 planets!")

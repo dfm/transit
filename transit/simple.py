@@ -5,14 +5,13 @@ from __future__ import division, print_function
 __all__ = ["SimpleSystem"]
 
 import numpy as np
-from ._transit import PythonSimpleSolver as Solver
+from ._transit import CythonSolver
 
 
 class SimpleSystem(object):
 
     def __init__(self, period=None, ror=None, duration=None, t0=0.0,
-                 impact=0.0, flux=1.0,
-                 q1=None, q2=None, mu1=None, mu2=None):
+                 impact=0.0, flux=1.0, q1=None, q2=None, mu1=None, mu2=None):
         if period is None or ror is None or duration is None:
             raise ValueError("missing required parameter 'period', 'ror', or "
                              "'duration'")
@@ -22,6 +21,7 @@ class SimpleSystem(object):
         self.ror = ror
         self.impact = impact
         self.flux = flux
+        self.unfrozen = np.ones(7, dtype=bool)
 
         # Allow different limb darkening parameters.
         if mu1 is not None and mu2 is not None:
@@ -65,11 +65,6 @@ class SimpleSystem(object):
         u2 = u1+u2
         self.q1, self.q2 = u2*u2, 0.5*u1/u2
 
-    def _get_solver(self):
-        u1, u2 = self.coeffs
-        return Solver(u1, u2, self.period, self.t0, self.duration, self.ror,
-                      self.impact)
-
     def light_curve(self, t, texp=0.0, tol=1e-8, maxdepth=4):
         """
         Get the light curve evaluated at a list of times using the current
@@ -86,5 +81,78 @@ class SimpleSystem(object):
 
         """
         t = np.atleast_1d(t)
-        return self._get_solver().light_curve(self.flux, t, texp, tol,
-                                              maxdepth)
+        return CythonSolver().simple_light_curve(self._get_params(),
+                                                 t, texp, tol, maxdepth)
+
+    def light_curve_gradient(self, t, texp=0.0, tol=1e-8, maxdepth=4):
+        """
+        Get the light curve evaluated at a list of times using the current
+        model.
+
+        :param t:
+            The times where the light curve should be evaluated (in days).
+
+        :param tol:
+            The stopping criterion for the exposure time integration.
+
+        :param maxdepth:
+            The maximum recursion depth of the exposure time integrator.
+
+        """
+        t = np.atleast_1d(t)
+        f, df = CythonSolver().simple_gradient(self._get_params(),
+                                               t, texp, tol, maxdepth)
+        return f, df
+
+    def __len__(self):
+        return np.sum(self.unfrozen)
+
+    def _parameter_names(self):
+        return ["ln_ror", "ln_period", "t0", "impact", "ln_duration",
+                "q1", "q2"]
+
+    def get_parameter_names(self):
+        return [n for n, f in zip(self._parameter_names(), self.unfrozen)
+                if f]
+
+    def _get_params(self):
+        return np.array([
+            np.log(self.ror), np.log(self.period), self.t0, self.impact,
+            np.log(self.duration),
+            np.log(self.q1)-np.log(1.0-self.q1),
+            np.log(self.q2)-np.log(1.0-self.q2),
+        ])
+
+    def get_vector(self):
+        return self._get_params()[self.unfrozen]
+
+    def set_vector(self, vector):
+        p = self.get_vector()
+        p[self.unfrozen] = vector
+        self.ror = np.exp(p[0])
+        self.period = np.exp(p[1])
+        self.t0 = p[2]
+        self.impact = p[3]
+        self.duration = np.exp(p[4])
+        self.q1 = np.exp(p[5]) / (1. + np.exp(p[5]))
+        self.q2 = np.exp(p[6]) / (1. + np.exp(p[6]))
+
+    def get_value(self, t, **kwargs):
+        return self.light_curve(t, **kwargs)
+
+    def get_gradient(self, t, **kwargs):
+        return self.light_curve_gradient(t, **kwargs)[1]
+
+    def freeze_parameter(self, parameter_name):
+        i = self._parameter_names().index(parameter_name)
+        self.unfrozen[i] = False
+
+    def thaw_parameter(self, parameter_name):
+        i = self._parameter_names().index(parameter_name)
+        self.unfrozen[i] = True
+
+    def freeze_all_parameters(self):
+        self.unfrozen[:] = False
+
+    def thaw_all_parameters(self):
+        self.unfrozen[:] = True
