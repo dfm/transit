@@ -112,7 +112,6 @@ class build_ext(_build_ext):
 
         # Update the extension's include directories.
         ext.include_dirs += [eigen_include, boost_include]
-        # boost_include, eigen_include, ceres_include]
 
         # Run the standard build procedure.
         _build_ext.build_extension(self, ext)
@@ -176,7 +175,8 @@ if __name__ == "__main__":
         description="A Python library for computing the light curves of "
                     "transiting planets",
         long_description=desc,
-        package_data={"": ["README.rst", "LICENSE", "transit/include/*.h", ]},
+        package_data={"": ["README.rst", "LICENSE", "transit/include/*.h",
+                           "transit/include/ceres/*.h"]},
         include_package_data=True,
         cmdclass=dict(build_ext=build_ext),
         classifiers=[
