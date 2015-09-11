@@ -6,25 +6,16 @@
 #include <cstddef>
 
 #define KEPLER_MAX_ITER 200
-#define KEPLER_CONV_TOL 1.48e-10
+#define KEPLER_CONV_TOL 1.48e-7
 
 using std::vector;
-
-template <typename T> int sgn(T val) {
-    return (T(0) <= val) - (val < T(0));
-}
 
 //
 // Newton's constant in $R_\odot^3 M_\odot^{-1} {days}^{-2}$.
 //
-#define G_GRAV 2945.4625385377644
+#define G_GRAV 2945.462538537765
 
 namespace transit {
-
-template <typename T>
-T ecc_to_mean_anomaly (const T& psi, const T& e) {
-    return psi - e * sin(psi);
-}
 
 double mean_to_ecc_anomaly (double M, double e, int *info) {
     int i;
@@ -51,7 +42,7 @@ double mean_to_ecc_anomaly (double M, double e, int *info) {
         psi = psi0 - 2.0 * f * fp / (2.0 * fp * fp - f * fpp);
 
         // Accept?
-        if (fabs(psi - psi0) <= KEPLER_CONV_TOL) return psi;
+        if (fabs((psi - psi0) / psi) <= KEPLER_CONV_TOL) return psi;
 
         // Save as the previous step.
         psi0 = psi;
@@ -72,44 +63,25 @@ Jet<T, N> mean_to_ecc_anomaly (Jet<T, N> M, Jet<T, N> e, int *info) {
 }
 
 template <typename T>
-void ecc_anomaly_to_cartesian (const T& a, const T& e, const T& psi,
-                               T* x, T* y)
-{
-    T hpsi = 0.5 * psi, shp = sin(hpsi), chp = cos(hpsi),
-      theta = 2.0 * atan2(sqrt(1.0 - e) * chp, sqrt(1.0 + e) * shp),
-      cth = cos(theta),
-      factor = a * (e * e - 1.0) / (1.0 + e * cos(theta));
-    *x = factor * cth;
-    *y = factor * sin(theta);
-}
-
-template <typename T>
-int solve_kepler (const T& manom,
-                  const T& a, const T& e,
-                  const T& sp, const T& cp,
-                  const T& six, const T& cix,
-                  const T& siy, const T& ciy,
+int solve_kepler (const T& M,
+                  const T& e, const T& cos_omega, const T& sin_omega,
+                  const T& a, const T& cos_i, const T& sin_i,
                   T* pos)
 {
+    // Solve Kepler's equation.
     int info;
-    T psi = mean_to_ecc_anomaly (manom, e, &info);
-
-    // Did solve fail?
+    T E = mean_to_ecc_anomaly (M, e, &info);
     if (info) return info;
 
     // Convert to Cartesian coordinates.
-    T x, y;
-    ecc_anomaly_to_cartesian (a, e, psi, &x, &y);
-
-    // Rotate by pomega.
-    T xp =  x * cp + y * sp,
-      yp = -x * sp + y * cp;
-
-    // Compute the positions.
-    pos[0] = xp * cix;
-    pos[1] = yp * ciy - xp * six * siy;
-    pos[2] = yp * siy + xp * six * ciy;
-
+    T r = a * (1.0 - e * cos(E)),
+      f = 2.0 * atan2(sqrt(1.0 + e) * tan(0.5 * E), sqrt(1.0 - e)),
+      cf = cos(f), sf = sin(f),
+      swpf = sin_omega * cf + cos_omega * sf,
+      cwpf = cos_omega * cf - sin_omega * sf;
+    pos[0] = r * cwpf;
+    pos[1] = r * swpf * cos_i;
+    pos[2] = r * swpf * sin_i;
     return 0;
 }
 
@@ -125,20 +97,19 @@ public:
     int get_n_body () const { return n_body_; };
 
     template <typename T>
-    void position (const T& m_central, const T* const params,
-                   const double t, T* pos) {
+    void position (const T* const params, const double t, T* pos) {
         // Access the parameters.
-        T a_body = params[2],
-          e_body = params[4],
-          cpom = params[5],
-          spom = params[6],
-          cix = params[7],
-          six = params[8],
-          ciy = params[9],
-          siy = params[10],
-          manom = t * params[11] + params[12];
+        T tref               = params[1],
+          e                  = params[2],
+          cos_omega          = params[3],
+          sin_omega          = params[4],
+          a                  = params[5],
+          cos_i              = params[6],
+          sin_i              = params[7],
+          two_pi_over_period = params[8],
+          M                  = (t - tref) * two_pi_over_period;
 
-        status_ = solve_kepler (manom, a_body, e_body, spom, cpom, six, cix, siy, ciy, pos);
+        status_ = solve_kepler (M, e, cos_omega, sin_omega, a, cos_i, sin_i, pos);
     };
 
     template <typename T>
@@ -148,67 +119,72 @@ public:
         //
         //   [ln_fstar, ln_rstar, ln_mstar] +
         //   [ln_r, ln_m, t0, sqrt(e)*cos(pomega), sqrt(e)*sin(pomega),
-        //    sqrt(a)*cos(ix), sqrt(a)*sin(ix), iy] * N_BODY +
+        //    sqrt(a)*cos(ix), sqrt(a)*sin(ix)] * N_BODY +
         //   [q_1, q_2]
         //
         //  (TODO: [ln(q_1 / (1 - q_1)), ln(q_2 / (1 - q_2))])
         //
-        T* result = new T[5 + 13 * n_body_];
+        T* result = new T[4 + 10 * n_body_];
         T m_central = exp(params[2]);
 
         // Central parameters.
-        result[0] = exp(params[0]);
-        result[1] = exp(params[1]);
-        result[2] = m_central;
-        result[3+13*n_body_] = params[3+8*n_body_];
-        result[3+13*n_body_+1] = params[3+8*n_body_+1];
+        result[0]              = exp(params[0]);         // Flux
+        result[1]              = exp(params[1]);         // Radius
+        result[2+10*n_body_]   = params[3+7*n_body_];    // q1
+        result[2+10*n_body_+1] = params[3+7*n_body_+1];  // q2
 
         int i, j, n;
-        for (i = 0, j = 3, n = 3; i < n_body_; ++i, j += 8, n += 13) {
+        for (i = 0, j = 3, n = 2; i < n_body_; ++i, j += 7, n += 10) {
             // Access the parameters.
-            T m_body = exp(params[j + 1]),
-              t0_body = params[j + 2],
-              ecosp = params[j + 3],
-              esinp = params[j + 4],
-              acosi = params[j + 5],
-              asini = params[j + 6],
-              iy = params[j + 7],
-              e_body, sqrte, a_body, sqrta,
-              psi0, period_over_2pi;
+            T mass        = exp(params[j + 1]),
+              t0          = params[j + 2],
+              sqrt_e_cosw = params[j + 3],
+              sqrt_e_sinw = params[j + 4],
+              sqrt_a_cosi = params[j + 5],
+              sqrt_a_sini = params[j + 6],
+              tref,
+              e, sqrt_e,
+              sin_omega, cos_omega,
+              a, sqrt_a,
+              two_pi_over_period,
+              E0;
 
-            e_body = ecosp * ecosp + esinp * esinp;
-            a_body = acosi*acosi + asini*asini;
-            sqrta = sqrt(a_body);
+            // Compute the period.
+            a = sqrt_a_cosi * sqrt_a_cosi + sqrt_a_sini * sqrt_a_sini;
+            sqrt_a = sqrt(a);
+            two_pi_over_period = sqrt((m_central + mass) * G_GRAV / (a*a*a));
 
-            period_over_2pi = sqrt(a_body*a_body*a_body / (m_central+m_body) / G_GRAV);
+            // Compute the eccentricity and special case circular orbits.
+            e = sqrt_e_cosw * sqrt_e_cosw + sqrt_e_sinw * sqrt_e_sinw;
+            if (e > DBL_EPSILON) {
+                sqrt_e = sqrt(e);
 
-            result[n]   = exp(params[j]);
-            result[n+1] = m_body;
-            result[n+2] = a_body;
-            result[n+3] = t0_body;
+                // omega = w - 0.5*pi
+                //  -> sin(omega) = -sin(0.5*pi - w) = -cos(w)
+                //  -> cos(omega) = cos(0.5*pi - w) = sin(w)
+                sin_omega = -sqrt_e_cosw / sqrt_e;
+                cos_omega =  sqrt_e_sinw / sqrt_e;
 
-            if (e_body > 0.0) {
-                sqrte = sqrt(e_body);
-                psi0 = 2.0 * atan2(-sqrt(1.0 - e_body) * esinp / (sqrte + ecosp),
-                                   sqrt(1.0 + e_body));
-                psi0 = psi0 - e_body * sin(psi0);
-                result[n+4] = e_body;
-                result[n+5]  = ecosp / sqrte;
-                result[n+6]  = esinp / sqrte;
+                // Compute the reference time using the time of transit.
+                //  -> tan(0.5*omega) = sin(omega) / (1 + cos(omega))
+                E0 = 2.0 * atan2(sqrt(1.0 - e) * sin_omega,
+                                 sqrt(1.0 + e) * (1.0 + cos_omega));
+                tref = 2.0 * t0 + (E0 - e * sin(E0)) / two_pi_over_period;
             } else {
-                psi0 = T(0.0);
-                result[n+4] = T(0.0);
-                result[n+5]  = T(1.0);
-                result[n+6]  = T(0.0);
+                sin_omega = T(0.0);
+                cos_omega = T(1.0);
+                tref = T(0.0);
             }
 
-            result[n+7]  = acosi / sqrta;
-            result[n+8]  = asini / sqrta;
-            result[n+9]  = cos(iy);
-            result[n+10] = sin(iy);
-
-            result[n+11] = 1.0 / period_over_2pi;
-            result[n+12] = -t0_body / period_over_2pi + psi0;
+            result[n]   = exp(params[j]);        // Radius
+            result[n+1] = tref;                  // Reference time
+            result[n+2] = e;                     // Eccentricity
+            result[n+3] = cos_omega;             // ...
+            result[n+4] = sin_omega;             // ...
+            result[n+5] = a;                     // Semi-major axis
+            result[n+6] = sqrt_a_cosi / sqrt_a;  // Inclination
+            result[n+7] = sqrt_a_sini / sqrt_a;  // ...
+            result[n+8] = two_pi_over_period;    // Time factor
         }
 
         return result;
@@ -216,11 +192,11 @@ public:
 
     template <typename T>
     T operator () (const T* const params, const double t) {
-        int i, n, nld = 3 + 13 * n_body_;
+        int i, n, nld = 2 + 10 * n_body_;
         T z, lam = params[0], pos[3] = {T(0.0), T(0.0), T(0.0)};
-        for (i = 0, n = 3; i < n_body_; ++i, n += 13) {
+        for (i = 0, n = 2; i < n_body_; ++i, n += 10) {
             // Solve Kepler's equation for the position of the body.
-            position(params[2], &(params[n]), t, pos);
+            position(&(params[n]), t, pos);
 
             // Find the impact parameter in the plane of the sky.
             z = sqrt(pos[1]*pos[1] + pos[2]*pos[2]);

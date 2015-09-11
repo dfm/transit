@@ -9,10 +9,7 @@ try:
 except ImportError:
     izip, imap = zip, map
 
-import math
-import logging
 import numpy as np
-
 from ._transit import CythonSolver
 
 
@@ -316,7 +313,7 @@ class Body(object):
         arg = b * factor * rstar / self.a
         if arg > 1.0:
             raise ValueError("Invalid impact parameter")
-        self.incl = math.degrees(math.acos(arg))
+        self.incl = np.degrees(np.arccos(arg))
         self._b = None
 
     @property
@@ -338,16 +335,16 @@ class Body(object):
 
         """
         self._check_ps()
+
         rstar = self.system.central.radius
         k = self.r/rstar
-        si = math.sin(math.radians(self.incl))
-        arg = rstar / self.a * math.sqrt((1+k) ** 2 - self.b**2) / si
-
+        dur = self.period / np.pi
+        arg = rstar/self.a * np.sqrt((1+k)**2 - self.b**2)
+        arg /= np.sin(np.radians(self.incl))
+        dur *= np.arcsin(arg)
         if self.e > 0.0:
-            logging.warn("The duration of an eccentric transit isn't analytic."
-                         " Use this value with caution")
-
-        return math.asin(arg) * self.period / math.pi
+            dur *= np.sqrt(1 - self.e**2) / (1 + self.e * np.sin(self.omega))
+        return dur
 
     @property
     def e(self):
@@ -366,7 +363,7 @@ class Body(object):
 
     @omega.setter
     def omega(self, v, hp=0.5*np.pi):
-        self.pomga = v - hp
+        self.pomega = v - hp
 
 
 class System(object):
@@ -405,7 +402,7 @@ class System(object):
         body.system = self
         self.bodies.append(body)
         self.unfrozen = np.concatenate((
-            self.unfrozen[:-2], np.zeros(8, dtype=bool), self.unfrozen[-2:]
+            self.unfrozen[:-2], np.zeros(7, dtype=bool), self.unfrozen[-2:]
         ))
 
     def _get_solver(self):
@@ -468,8 +465,8 @@ class System(object):
         for i, body in enumerate(self.bodies):
             names += map("bodies[{0}]:{{0}}".format(i).format,
                          ("ln_radius", "ln_mass", "t0",
-                          "sqrt_e_cos_pom", "sqrt_e_sin_pom",
-                          "sqrt_a_cos_i", "sqrt_a_sin_i", "iy"))
+                          "sqrt_e_cos_omega", "sqrt_e_sin_omega",
+                          "sqrt_a_cos_i", "sqrt_a_sin_i"))
         names += ["central:q1", "central:q2"]
         return names
 
@@ -481,7 +478,7 @@ class System(object):
         return self._get_params()[self.unfrozen]
 
     def _get_params(self):
-        params = np.empty(5+8*len(self.bodies))
+        params = np.empty(5+7*len(self.bodies))
         params[0] = np.log(self.central.flux)
         params[1] = np.log(self.central.radius)
         params[2] = np.log(self.central.mass)
@@ -489,18 +486,17 @@ class System(object):
         params[-1] = self.central.q2
 
         for i, body in enumerate(self.bodies):
-            n = 3 + 8 * i
+            n = 3 + 7 * i
             params[n] = np.log(body.r)
             params[n+1] = np.log(max(body.mass, 1e-14))
             params[n+2] = body.t0
-            params[n+3] = np.sqrt(body.e) * np.cos(body.pomega)
-            params[n+4] = np.sqrt(body.e) * np.sin(body.pomega)
+            params[n+3] = np.sqrt(body.e) * np.cos(body.omega)
+            params[n+4] = np.sqrt(body.e) * np.sin(body.omega)
 
             sa = np.sqrt(body.a)
-            ix = np.radians(body.ix + 90.0 - self.iobs)
+            ix = np.radians(self.iobs + body.ix)
             params[n+5] = sa * np.cos(ix)
             params[n+6] = sa * np.sin(ix)
-            params[n+7] = np.radians(body.iy)
 
         return params
 

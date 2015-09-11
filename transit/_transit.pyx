@@ -19,15 +19,15 @@ cdef extern from "quad.h" namespace "transit":
 cdef extern from *:
     ctypedef int simple_type "7"
     ctypedef int kepler_0 "5"
-    ctypedef int kepler_1 "5+8"
-    ctypedef int kepler_2 "5+8*2"
-    ctypedef int kepler_3 "5+8*3"
-    ctypedef int kepler_4 "5+8*4"
-    ctypedef int kepler_5 "5+8*5"
-    ctypedef int kepler_6 "5+8*6"
-    ctypedef int kepler_7 "5+8*7"
-    ctypedef int kepler_8 "5+8*8"
-    ctypedef int kepler_9 "5+8*9"
+    ctypedef int kepler_1 "5+7"
+    ctypedef int kepler_2 "5+7*2"
+    ctypedef int kepler_3 "5+7*3"
+    ctypedef int kepler_4 "5+7*4"
+    ctypedef int kepler_5 "5+7*5"
+    ctypedef int kepler_6 "5+7*6"
+    ctypedef int kepler_7 "5+7*7"
+    ctypedef int kepler_8 "5+7*8"
+    ctypedef int kepler_9 "5+7*9"
 
 
 cdef extern from "integrator.h" namespace "transit":
