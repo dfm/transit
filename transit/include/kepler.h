@@ -124,17 +124,17 @@ public:
         //
         //  (TODO: [ln(q_1 / (1 - q_1)), ln(q_2 / (1 - q_2))])
         //
-        T* result = new T[4 + 10 * n_body_];
+        T* result = new T[4 + 9 * n_body_];
         T m_central = exp(params[2]);
 
         // Central parameters.
         result[0]              = exp(params[0]);         // Flux
         result[1]              = exp(params[1]);         // Radius
-        result[2+10*n_body_]   = params[3+7*n_body_];    // q1
-        result[2+10*n_body_+1] = params[3+7*n_body_+1];  // q2
+        result[2+9*n_body_]    = params[3+7*n_body_];    // q1
+        result[2+9*n_body_+1]  = params[3+7*n_body_+1];  // q2
 
         int i, j, n;
-        for (i = 0, j = 3, n = 2; i < n_body_; ++i, j += 7, n += 10) {
+        for (i = 0, j = 3, n = 2; i < n_body_; ++i, j += 7, n += 9) {
             // Access the parameters.
             T mass        = exp(params[j + 1]),
               t0          = params[j + 2],
@@ -159,21 +159,23 @@ public:
             if (e > DBL_EPSILON) {
                 sqrt_e = sqrt(e);
 
-                // omega = w - 0.5*pi
-                //  -> sin(omega) = -sin(0.5*pi - w) = -cos(w)
-                //  -> cos(omega) = cos(0.5*pi - w) = sin(w)
-                sin_omega = -sqrt_e_cosw / sqrt_e;
-                cos_omega =  sqrt_e_sinw / sqrt_e;
+                // omega
+                sin_omega = sqrt_e_sinw / sqrt_e;
+                cos_omega = sqrt_e_cosw / sqrt_e;
 
                 // Compute the reference time using the time of transit.
-                //  -> tan(0.5*omega) = sin(omega) / (1 + cos(omega))
-                E0 = 2.0 * atan2(sqrt(1.0 - e) * sin_omega,
-                                 sqrt(1.0 + e) * (1.0 + cos_omega));
-                tref = 2.0 * t0 + (E0 - e * sin(E0)) / two_pi_over_period;
+                //  -> f = 0.5*pi - w
+                //    -> sin(f) = cos(w)
+                //    -> cos(f) = sin(w)
+                //  -> tan(0.5*f) = sin(f) / (1 + cos(f))
+                //                = cos(w) / (1 + sin(w))
+                E0 = 2.0 * atan2(sqrt(1.0 - e) * cos_omega,
+                                 sqrt(1.0 + e) * (1.0 + sin_omega));
+                tref = t0 - (E0 - e * sin(E0)) / two_pi_over_period;
             } else {
                 sin_omega = T(0.0);
                 cos_omega = T(1.0);
-                tref = T(0.0);
+                tref = t0 - T(0.5 * M_PI) / two_pi_over_period;
             }
 
             result[n]   = exp(params[j]);        // Radius
@@ -192,17 +194,17 @@ public:
 
     template <typename T>
     T operator () (const T* const params, const double t) {
-        int i, n, nld = 2 + 10 * n_body_;
+        int i, n, nld = 2 + 9 * n_body_;
         T z, lam = params[0], pos[3] = {T(0.0), T(0.0), T(0.0)};
-        for (i = 0, n = 2; i < n_body_; ++i, n += 10) {
+        for (i = 0, n = 2; i < n_body_; ++i, n += 9) {
             // Solve Kepler's equation for the position of the body.
             position(&(params[n]), t, pos);
 
             // Find the impact parameter in the plane of the sky.
-            z = sqrt(pos[1]*pos[1] + pos[2]*pos[2]);
+            z = sqrt(pos[0]*pos[0] + pos[1]*pos[1]);
 
             // Is the body transiting?
-            if (pos[0] > 0.0) {
+            if (pos[2] > 0.0) {
                 // If transiting, use the stellar limb darkening profile.
                 lam *= ld_(&(params[nld]), params[n] / params[1], z / params[1]);
             }

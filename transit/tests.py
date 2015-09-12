@@ -92,35 +92,26 @@ def test_period():
 
 
 def _measure_duration(nm, body, delta=5e-5):
-    # Compute the positive duration.
-    t = np.arange(body.t0, body.t0 + body.duration, delta)
+    dur = body.duration
+    print(dur)
+    t = np.arange(-2 * dur, 2 * dur, delta)
     lc = body.system.light_curve(t)
-    plus = t[1 - lc == 0][0]
-
-    # Compute the negative duration.
-    t = np.arange(body.t0, body.t0 - body.duration, -delta)
-    lc = body.system.light_curve(t)
-    minus = t[1 - lc == 0][0]
-
-    err = np.abs((plus - minus) - body.duration)
-    assert err < 10*delta, "Duration test '{0}' failed.".format(nm)
+    measured = t[lc < 1.0].max() - t[lc < 1.0].min()
+    assert np.allclose(measured, dur, atol=0.01), nm
 
 
 def test_duration():
     s = System(Central())
-    body = Body(period=10, r=0.01, b=0.5)
+    body = Body(period=10, r=0.01)
     s.add_body(body)
-
-    # Basic tests.
-    for p in [1.0, 10.0, 100.0, 1e4]:
+    for p in [1.0, 10.0, 100.0, 1e3]:
         body.period = p
         body.b = 0.5
         _measure_duration("period = {0}".format(p), body)
-    body.period = 10.0
 
 
-def _test_gradient(s, eps=1.345e-6, **kwargs):
-    t = np.linspace(-5.0, 5.0, 500)
+def _test_gradient(s, eps=1.345e-7, **kwargs):
+    t = np.linspace(-1.0, 1.0, 5000)
     g = s.get_gradient(t, **kwargs)
     assert np.any(np.abs(g) > 0.0)
 
@@ -145,8 +136,7 @@ def _test_gradient(s, eps=1.345e-6, **kwargs):
 
 def test_kepler_gradient(**kwargs):
     s = System(Central())
-    s.add_body(Body(period=3.0, mass=0.1, r=0.1, b=0.5, e=0.1, pomega=0.5,
-                    iy=45.))
+    s.add_body(Body(period=3.0, mass=0.1, r=0.1, b=0.5, e=0.1, omega=0.5))
     s.thaw_all_parameters()
     _test_gradient(s, **kwargs)
 

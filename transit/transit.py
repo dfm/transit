@@ -269,12 +269,12 @@ class Body(object):
 
         """
         self._check_ps()
-        return self.system.iobs - self.ix
+        return self.system.iobs + self.ix
 
     @incl.setter
     def incl(self, v):
         self._check_ps()
-        self.ix = self.system.iobs - v
+        self.ix = v - self.system.iobs
 
     @property
     def b(self):
@@ -359,11 +359,11 @@ class Body(object):
 
     @property
     def omega(self, hp=0.5*np.pi):
-        return self.pomega - hp
+        return self.pomega
 
     @omega.setter
     def omega(self, v, hp=0.5*np.pi):
-        self.pomega = v - hp
+        self.pomega = v
 
 
 class System(object):
@@ -510,7 +510,7 @@ class System(object):
         self.central.q2 = params[-1]
 
         for i, body in enumerate(self.bodies):
-            n = 3 + 8 * i
+            n = 3 + 7 * i
 
             body.r = np.exp(params[n])
             body.mass = np.exp(params[n+1])
@@ -522,8 +522,7 @@ class System(object):
 
             ax, ay = params[n+5:n+7]
             body.a = ax**2 + ay**2
-            body.ix = np.degrees(np.arctan2(ay, ax)) - 90.0 + self.iobs
-            body.iy = np.degrees(params[n+8])
+            body.ix = np.degrees(np.arctan2(ay, ax)) - self.iobs
 
     def get_value(self, t, **kwargs):
         return self.light_curve(t, **kwargs)

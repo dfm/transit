@@ -147,22 +147,22 @@ cdef class CythonSolver:
             flag = integrator.gradient[kepler_1](
                 <double*>params.data, t.shape[0], <double*>t.data, texp,
                 <double*>lc.data, <double*>gradient.data)
-        # elif n_body == 2:
-        #     flag = integrator.gradient[kepler_2](
-        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
-        #         <double*>lc.data, <double*>gradient.data)
-        # elif n_body == 3:
-        #     flag = integrator.gradient[kepler_3](
-        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
-        #         <double*>lc.data, <double*>gradient.data)
-        # elif n_body == 4:
-        #     flag = integrator.gradient[kepler_4](
-        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
-        #         <double*>lc.data, <double*>gradient.data)
-        # elif n_body == 5:
-        #     flag = integrator.gradient[kepler_5](
-        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
-        #         <double*>lc.data, <double*>gradient.data)
+        elif n_body == 2:
+            flag = integrator.gradient[kepler_2](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 3:
+            flag = integrator.gradient[kepler_3](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 4:
+            flag = integrator.gradient[kepler_4](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        elif n_body == 5:
+            flag = integrator.gradient[kepler_5](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
         else:
             raise ValueError("You're a maniac. Don't take the gradient of a "
                              "Kepler light curve with more than 5 planets!")
