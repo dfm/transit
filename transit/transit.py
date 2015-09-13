@@ -9,6 +9,7 @@ try:
 except ImportError:
     izip, imap = zip, map
 
+import logging
 import numpy as np
 from ._transit import CythonSolver
 
@@ -116,15 +117,8 @@ class Body(object):
     elements specified either specify a Keplerian orbit. This object includes
     all sorts of magic for converting between different specifications when
     needed but the base description of the planet and the orbit is
-    parameterized by the parameters:
-
-    .. code-block:: python
-
-        (flux, r, mass, a, t0, e, pomega, ix, iy)
-
-    :param flux:
-        The flux of the body measured relative to the central.
-        (default: ``0.0``)
+    parameterized by the parameters listed by
+    :func:`System.get_parameter_vector`.
 
     :param r:
         The radius measured in Solar radii. (default: ``0.0``)
@@ -148,11 +142,7 @@ class Body(object):
 
     :param omega:
         The orientation of the orbital ellipse in radians as defined by Winn
-        (2010). (default: ``0.5 * pi``)
-
-    :param pomega:
-        An alternative definition of the orbital ellipse orientation
-        ``pomega = 0.5 * pi - omega``. (default: ``0.0``)
+        (2010). (default: ``0.0``)
 
     :param ix:
         The relative inclination of the orbital plane along the line-of-sight
@@ -161,6 +151,10 @@ class Body(object):
         subtracted from the base inclination of the planetary system to get
         the standard measurement of the inclination. Either this parameter
         or ``b`` can be specified but not both. (default: ``0.0``)
+
+    :param incl:
+        An alternative to `ix` but defined in the standard way (90-deg is edge
+        on).
 
     :param b:
         The mean impact parameter of the orbit measured in stellar radii (not
@@ -173,46 +167,49 @@ class Body(object):
 
         (default: ``0.0``)
 
-    :param iy:
-        The rotation of the orbital ellipse in the plane of the sky measured
-        in radians. Note: this value will not affect the light curve or radial
-        velocity values at all. (default: ``0.0``)
-
     """
 
-    def __init__(self, flux=0.0, r=0.0, mass=0.0, a=None, period=None, t0=0.0,
-                 e=0.0, omega=None, pomega=None, ix=None, b=None, iy=0.0):
-        self.flux = flux
-        self.r = r
+    def __init__(self,
+                 radius=0.0,
+                 mass=0.0,
+                 a=None,
+                 period=None,
+                 t0=0.0,
+                 e=0.0,
+                 omega=0.0,
+                 ix=None,
+                 incl=None,
+                 b=None,
+                 # Deprecated:
+                 r=None,
+                 pomega=None):
+        # Deprecation warnings.
+        if r is not None:
+            logging.warn("the argument 'r' is deprecated. "
+                         "Use 'radius' instead")
+        if pomega is not None:
+            logging.warn("the argument 'pomega' is deprecated. "
+                         "Use 'omega' instead")
+
+        # Check the supplied arguments.
+        assert sum((a is None, period is None)) == 1, \
+            "you must provide one (and only one) of 'a' and 'period'"
+        assert sum((b is None, ix is None, incl is None)) >= 2, \
+            "you can give a value for up to one of 'b', 'ix', or 'incl'"
+        if ix is None and b is None and incl is None:
+            self._ix = 0.0
+
+        # Base parameters.
+        self.radius = radius if r is None else r
         self._a = a
         self._period = period
         self.mass = mass
         self.t0 = t0
         self.e = e
+        self.omega = omega if pomega is None else pomega
         self._b = b
         self._ix = ix
-        self.iy = iy
-
-        if a is not None:
-            assert period is None, \
-                "You can't supply both a period and a semi-major axis."
-        else:
-            assert period is not None, \
-                "You must supply either a period or a semi-major axis."
-
-        assert b is None or ix is None, \
-            "You can't supply both an inclination and impact parameter."
-        if ix is None and b is None:
-            self._ix = 0.0
-
-        assert pomega is None or omega is None, \
-            "You can't specify omega and pomega"
-        if omega is not None:
-            self.omega = omega
-        elif pomega is not None:
-            self.pomega = pomega
-        else:
-            self.pomega = 0.0
+        self._incl = incl
 
     def _check_ps(self):
         if not hasattr(self, "system"):
@@ -220,14 +217,22 @@ class Body(object):
                                "before getting the period.")
 
     @property
+    def radius(self):
+        return self._radius
+
+    @radius.setter
+    def radius(self, r):
+        if r < 0:
+            raise ValueError("Invalid planet radius (must be non-negative)")
+        self._radius = r
+
+    @property
     def r(self):
-        return self._r
+        return self.radius
 
     @r.setter
     def r(self, r):
-        if r < 0:
-            raise ValueError("Invalid planet radius (must be non-negative)")
-        self._r = r
+        self.radius = r
 
     @property
     def period(self):
@@ -268,6 +273,8 @@ class Body(object):
         The standard definition of inclination: 90-deg is edge on.
 
         """
+        if self._incl is not None:
+            return self._incl
         self._check_ps()
         return self.system.iobs + self.ix
 
@@ -275,6 +282,7 @@ class Body(object):
     def incl(self, v):
         self._check_ps()
         self.ix = v - self.system.iobs
+        self._incl = None
 
     @property
     def b(self):
@@ -319,7 +327,12 @@ class Body(object):
     @property
     def ix(self):
         if self._ix is None:
-            self.b = self._b
+            if self._b is not None:
+                self.b = self._b
+            elif self._incl is not None:
+                self.incl = self._incl
+            else:
+                raise RuntimeError("Something went wrong.")
         return self._ix
 
     @ix.setter
