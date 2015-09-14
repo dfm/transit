@@ -1,6 +1,14 @@
 #ifndef _TRANSIT_ELLINT_H_
 #define _TRANSIT_ELLINT_H_
 
+//
+// Elliptic integrals computed following:
+//  Bulirsch 1965, Numerische Mathematik, 7, 78
+//  Bulirsch 1965, Numerische Mathematik, 7, 353
+//
+// And the implementation by E. Agol (private communication).
+//
+
 #include <cmath>
 #include "ceres/jet.h"
 
