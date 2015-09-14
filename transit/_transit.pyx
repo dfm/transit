@@ -57,6 +57,20 @@ cdef extern from "simple.h" namespace "transit":
         int get_status () const
         void* reparameterize (const void* const params)
 
+cdef extern from "ttvfaster.h" namespace "transit::ttvfaster":
+    cdef cppclass TTVFasterResult[T]:
+        unsigned get_ntransits (unsigned i)
+        T* get_times (unsigned i)
+
+    cdef cppclass TTVFaster[T]:
+        TTVFaster()
+        TTVFasterResult* compute_times (
+            unsigned n_planets,
+            T* params,
+            double t0,
+            double tf,
+            unsigned m_max)
+
 
 cdef class CythonSolver:
 
@@ -171,3 +185,26 @@ cdef class CythonSolver:
             raise RuntimeError("the solver failed with code={0}".format(flag))
 
         return lc, gradient
+
+    def approx_times(self,
+                     unsigned n_body,
+                     np.ndarray[DTYPE_t] params,
+                     double tmin,
+                     double tmax,
+                     unsigned m_max):
+        cdef unsigned i, j, n
+        cdef double* times
+        cdef TTVFaster[double] solver = TTVFaster[double]()
+        cdef TTVFasterResult[double]* result
+
+        result = solver.compute_times(n_body, <double*>params.data,
+                                      tmin, tmax, m_max);
+        output_times = []
+        for i in range(n_body):
+            n = result.get_ntransits(i)
+            times = result.get_times(i)
+            output_times.append(np.empty(n, dtype=np.float64))
+            for j in range(n):
+                output_times[-1][j] = times[j]
+        del result
+        return output_times

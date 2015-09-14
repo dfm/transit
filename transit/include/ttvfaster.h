@@ -425,7 +425,7 @@ TTVFasterResult<T>* compute_times (
     double tf,
     unsigned m_max
 ) {
-    T mstar = params[0];
+    T mstar = exp(params[0]);
 
     // Pre-allocate some coefficient arrays.
     vector<T> b(m_max+2),
@@ -443,7 +443,7 @@ TTVFasterResult<T>* compute_times (
     TTVFasterResult<T>* times = new TTVFasterResult<T>(n_planets);
     unsigned j;
     for (j = 0; j < n_planets; j++) {
-        T period = params[j*7+2];
+        T period = exp(params[j*7+2]);
         n_transits[j] = ttv_to_int((tf - t0) / period + 1.0);
         times->set_ntransits(j, n_transits[j]);
     }
@@ -451,7 +451,7 @@ TTVFasterResult<T>* compute_times (
     // "Keplerian" times
     unsigned count;
     for (j = 0; j < n_planets; j++) {
-        T P1 = params[j*7+2],
+        T P1 = exp(params[j*7+2]),
           TT1 = params[j*7+7];
         for (count = 0; count < n_transits[j]; count++)
             times->get_times(j)[count] = t0 + P1*double(count) + TT1;
@@ -462,10 +462,10 @@ TTVFasterResult<T>* compute_times (
         unsigned i = j+1;
 
         // First planet parameters.
-        T P1 = params[j*7+2],
+        T P1 = exp(params[j*7+2]),
           TT1 = params[j*7+7],
-          m1 = params[j*7+1],
-          e1 = sqrt(params[j*7+6]*params[7*j+6]+params[j*7+3]*params[7*j+3]),
+          m1 = exp(params[j*7+1]),
+          e1 = params[j*7+6]*params[7*j+6]+params[j*7+3]*params[7*j+3],
           ap1 = principal_value(atan2(params[j*7+6],params[j*7+3])),
           Omega1 = principal_value(params[j*7+5]),
           trueAnom1 = principal_value(0.0-ap1-Omega1), /* at transit*/
@@ -473,10 +473,10 @@ TTVFasterResult<T>* compute_times (
           MT1= EccAnom1-e1*sin(EccAnom1),
           n1 = 2.0*PI/P1;
 
-        T P2 = params[i*7+2],
+        T P2 = exp(params[i*7+2]),
           TT2 = params[i*7+7],
-          m2 = params[i*7+1],
-          e2 = sqrt(params[i*7+6]*params[7*i+6]+params[i*7+3]*params[7*i+3]),
+          m2 = exp(params[i*7+1]),
+          e2 = params[i*7+6]*params[7*i+6]+params[i*7+3]*params[7*i+3],
           ap2 = principal_value(atan2(params[i*7+6],params[i*7+3])),
           Omega2 = principal_value(params[i*7+5]),
           trueAnom2 = principal_value(0.0-ap2-Omega2), /* at transit*/

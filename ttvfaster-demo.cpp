@@ -6,6 +6,7 @@
 
 
 #include <iostream>
+#include <cmath>
 #include "ceres/jet.h"
 #include "ttvfaster.h"
 
@@ -13,10 +14,14 @@ using ceres::Jet;
 using namespace transit::ttvfaster;
 
 int main () {
+    double e1 = sqrt(pow(-0.00654273, 2) + pow(-0.05891280, 2)),
+           omega1 = atan2(-0.05891280, -0.00654273),
+           e2 = sqrt(pow(-0.00096537, 2) + pow(-0.00953292, 2)),
+           omega2 = atan2(-0.00096537, -0.00953292);
     double params[15] = {
-        1.0,
-        0.00001027,  66.03300476, -0.00654273, 1.57079637, -1.57079637, -0.05891280, 142.63816833,
-        0.00041269, 125.85229492, -0.00096537, 1.57079637, -1.57079637, -0.00953292, 236.66268921
+        log(1.0),
+        log(0.00001027),  log(66.03300476), sqrt(e1)*cos(omega1), 1.57079637, -1.57079637, sqrt(e1)*sin(omega1), 142.63816833,
+        log(0.00041269), log(125.85229492), sqrt(e2)*cos(omega2), 1.57079637, -1.57079637, sqrt(e2)*sin(omega2), 236.66268921
     };
 
     // Start with the standard result.
