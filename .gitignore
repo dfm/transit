@@ -7,3 +7,5 @@ dist
 build
 *.egg-info
 transit/_transit.cpp
+ttvfaster
+ttvfaster-demo
