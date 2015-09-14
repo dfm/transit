@@ -3,24 +3,11 @@
 
 #include <cmath>
 #include <cfloat>
+#include "ellint.h"
 
-#include "jet_ext.h"
+using std::abs;
 
 namespace transit {
-
-template <typename T>
-inline T occ_area (const T& r0, const T& p, const T& b)
-{
-    if (b > r0 + p) return T(0.0);
-    else if (_fabs(r0-p) < b && b <= r0+p) {
-        T r2 = r0*r0, p2 = p*p, b2 = b*b, k1, k2, k3;
-        k1 = _acos(T(0.5) * (b2 + p2 - r2) / b / p);
-        k2 = _acos(T(0.5) * (b2 + r2 - p2) / b / r0);
-        k3 = sqrt((p+r0-b) * (b+p-r0) * (b-p+r0) * (b+r0+p));
-        return (p2 * k1 + r2 * k2 - T(0.5) * k3) / T(M_PI);
-    } else if (b <= r0 - p) return p * p;
-    return r0 * r0;
-}
 
 // Constants from Table A1.
 #define PAL_AB  T a = (p-z)*(p-z), \
