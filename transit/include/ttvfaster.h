@@ -24,8 +24,6 @@ namespace ttvfaster {
 /* Please cite Agol & Deck (2015) if you make use of this code in your research.*/
 #define LAPLACE_EPS   1.0e-10
 #define PI            M_PI
-#define TWOPI         (2*M_PI)
-#define MAX_N_PLANETS 9
 
 // Note: - this defines the unit system: Msun, Day, AU
 //       - this is different from the rest of the transit namespace.
@@ -34,44 +32,18 @@ namespace ttvfaster {
 // Gradient helpers
 int ttv_to_int (double x) { return int(x); }
 template <typename T, int N>
-int ttv_to_int (Jet<T, N> x) { return int(x.a); }
+int ttv_to_int (Jet<T, N>& x) { return int(x.a); }
 
 double principal_value(double theta) {
     theta -= 2.0*PI*floor(theta/(2.0*PI));
     return(theta);
 }
 template <typename T, int N>
-Jet<T, N> principal_value(Jet<T, N> theta) {
+Jet<T, N> principal_value(const Jet<T, N>& theta) {
     double value = principal_value(theta.a);
     Jet<T, N> result(value, theta.v);
     return result;
 }
-
-// This is a wrapper around the results dataset.
-template <typename T>
-class TTVFasterResult {
-public:
-    TTVFasterResult (unsigned nplanets) : nplanets_(nplanets) {
-        times_ = new T*[nplanets_];
-        ntransits_ = new unsigned[nplanets_];
-    };
-    ~TTVFasterResult () {
-        delete ntransits_;
-        for (unsigned i = 0; i < nplanets_; ++i) delete times_[i];
-        delete times_;
-    };
-
-    void set_ntransits (unsigned i, unsigned n) {
-        times_[i] = new T[n];
-        ntransits_[i] = n;
-    };
-    unsigned get_ntransits (unsigned i) const { return ntransits_[i]; };
-    T* get_times (unsigned i) { return times_[i]; };
-
-private:
-    unsigned nplanets_, *ntransits_;
-    T** times_;
-};
 
 template <typename T>
 class TTVFaster {
@@ -84,9 +56,10 @@ TTVFaster () {};
 T AJ00, AJ01, AJ02, AJ10, AJ20, AJ11;
 
 // Coefficient helper functions
-T laplace(T s, int i, int j, T a) {
-    T as, term, sum, factor1, factor2, factor3, factor4;
-    int k,q, q0;
+T laplace(double s, int i, int j, const T& a) {
+    T as, term;
+    double sum, factor1, factor2, factor3, factor4;
+    int k, q, q0;
 
     as = a*a;
 
@@ -94,64 +67,65 @@ T laplace(T s, int i, int j, T a) {
 
     if(j<=i)     /* compute first term in sum */
     {
-        factor4 = T(1.0);
+        factor4 = 1.0;
         for(k=0; k<j; k++)
-            factor4 = factor4 * double(i - k);
-        sum = T(factor4);
+            factor4 *= (i - k);
+        sum = factor4;
         q0=0;
     }
     else
     {
         q0 = (j + 1 - i) / 2;
-        sum = T(0.0);
-        factor4 = T(1.0);
+        sum = 0.0;
+        factor4 = 1.0;
     }
 
     /* compute factors for terms in sum */
 
     factor1 = s;
-    factor2 = s + double(i);
-    factor3 = T(i + 1.0);
+    factor2 = s + i;
+    factor3 = i + 1.0;
     for(q=1;q<q0;q++)   /* no contribution for q = 0 */
     {
-        factor1 *= s + double(q);
-        factor2 *= s + double(i + q);
-        factor3 *= T(i + 1.0 + q);
+        factor1 *= s + q;
+        factor2 *= s + i + q;
+        factor3 *= i + 1.0 + q;
     }
 
-    term = as * factor1 * factor2 / (factor3 * double(q));
+    term = as * factor1 * factor2 / (factor3 * q);
 
     /* sum series */
 
+    T tsum = T(sum);
     while(term*factor4 > LAPLACE_EPS)
     {
-        factor4 = T(1.0);
+        factor4 = 1.0;
         for(k=0;k<j;k++)
-            factor4 *= T(2.0*q + i - k);
-        sum += term * factor4;
-        factor1 += T(1.0);
-        factor2 += T(1.0);
-        factor3 += T(1.0);
+            factor4 *= (2*q + i - k);
+        tsum += term * factor4;
+        factor1 += 1.0;
+        factor2 += 1.0;
+        factor3 += 1.0;
         q++;
-        term *= as * factor1 * factor2 / (factor3 * double(q));
+        term *= as * factor1 * factor2 / (factor3 * q);
 
     }
 
     /* fix coefficient */
 
     for(k=0;k<i;k++)
-        sum *= (s + (double(k)))/((double(k))+1.0);
+        tsum = tsum * (s + ((double) k))/(((double) k)+1.0);
 
     if(q0 <= 0)
-        sum *= 2.0 * pow(a, (double(i)));
+        tsum = tsum * 2.0 * pow(a, ((double) i));
     else
-        sum *= 2.0 * pow(a, (double(2*q0 + i - 2)));
+        tsum = tsum * 2.0 * pow(a, ((double) 2*q0 + i - 2));
 
-    return(sum);
+    return(tsum);
 }
 
-T gam(int i, int k, int j, T kappa, T beta, T alpha) {
-    T val = T(0.0);
+T gam(int i, int k, int j, const T& kappa, const T& beta, const T& alpha) {
+    T val;
     if(i==1){
         if(k ==0){
             val = beta;
@@ -188,13 +162,13 @@ T gam(int i, int k, int j, T kappa, T beta, T alpha) {
     return(val);
 }
 
-T xi(int i, int k, int j, T kappa, T beta, T alpha) {
+T xi(int i, int k, int j, const T& kappa, const T& beta, const T& alpha) {
     if(i==1) return beta;
     else return kappa;
 }
 
-T d1(int i, int k, int j, T kappa, T beta, T alpha) {
-    T val = T(0.0);
+T d1(int i, int k, int j, const T& kappa, const T& beta, const T& alpha) {
+    T val;
     if(i==1){
         if(j==1){
             val = alpha*double(j)*(AJ00-alpha);
@@ -212,8 +186,8 @@ T d1(int i, int k, int j, T kappa, T beta, T alpha) {
     return(val);
 }
 
-T d2(int i, int k, int j, T kappa, T beta, T alpha) {
-    T val = T(0.0);
+T d2(int i, int k, int j, const T& kappa, const T& beta, const T& alpha) {
+    T val;
     if(i==1){
         if(j==1){
             val = alpha*(AJ10-alpha);
@@ -231,8 +205,8 @@ T d2(int i, int k, int j, T kappa, T beta, T alpha) {
     return(val);
 }
 
-T C1(int i, int k, int j, T kappa, T beta, T alpha) {
-    T val=T(0.0);
+T C1(int i, int k, int j, const T& kappa, const T& beta, const T& alpha) {
+    T val;
     if(i==1){
         if(k==0){
             val = d1(i,k,j,kappa,beta,alpha);
@@ -302,8 +276,8 @@ T C1(int i, int k, int j, T kappa, T beta, T alpha) {
     return(val);
 }
 
-T C2(int i, int k, int j, T kappa, T beta, T alpha) {
-    T val = T(0.0);
+T C2(int i, int k, int j, const T& kappa, const T& beta, const T& alpha) {
+    T val;
     if(i==1){
         if(k==0){
             val = d2(i,k,j,kappa,beta,alpha);
@@ -372,58 +346,94 @@ T C2(int i, int k, int j, T kappa, T beta, T alpha) {
     return(val);
 }
 
-T u(T gamma, T C1v, T C2v){
-    T val=T(0.0);
+T u(const T& gamma, const T& C1v, const T& C2v){
     T gsq = gamma*gamma;
-    val = ((3.0+gsq)*C1v+2.0*gamma*C2v)/gsq/(1.0-gsq);
-    return(val);
+    return ((3.0+gsq)*C1v+2.0*gamma*C2v)/gsq/(1.0-gsq);
 }
 
-T v_plus(T z, T d1v, T d2v){
-    T val=T(0.0);
+T v_plus(const T& z, const T& d1v, const T& d2v){
     T zsq = z*z;
-    val = (((1.0-zsq)+6.0*z)*d1v+(2.0+zsq)*d2v)/(z*(1.0-zsq)*(z+1.0)*(z+2.0));
-    return(val);
+    return (((1.0-zsq)+6.0*z)*d1v+(2.0+zsq)*d2v)/(z*(1.0-zsq)*(z+1.0)*(z+2.0));
 }
 
-T v_minus(T z, T d1v, T d2v){
-    T val=T(0.0);
+T v_minus(const T& z, const T& d1v, const T& d2v){
     T zsq = z*z;
-    val = ((-(1.0-zsq)+6.0*z)*d1v+(2.0+zsq)*d2v)/(z*(1.0-zsq)*(z-1.0)*(z-2.0));
-    return(val);
+    return ((-(1.0-zsq)+6.0*z)*d1v+(2.0+zsq)*d2v)/(z*(1.0-zsq)*(z-1.0)*(z-2.0));
 }
 
-T f_j_k_i(T alpha,int j,int k, int i, T kappa_o_m, T beta_o_m,vector<T>& a00,vector<T>& a01, vector<T>& a10, vector<T>& a20, vector<T>& a02, vector<T>& a11) {
-    T val=T(0.0);
-    T beta,kappa;
-
+T f_j_k_i(
+    const T& alpha,int j,int k, int i,
+    const T& kappa_o_m, const T& beta_o_m,
+    const vector<T>& a00, const vector<T>& a01, const vector<T>& a10,
+    const vector<T>& a20, const vector<T>& a02, const vector<T>& a11
+) {
     AJ00= a00[j];
     AJ01= a01[j];
     AJ02= a02[j];
     AJ20= a20[j];
     AJ10= a10[j];
     AJ11= a11[j];
-    beta = beta_o_m*double(j);
-    kappa = kappa_o_m*double(j);
-    val=u(gam(i,k,j,kappa,beta,alpha),C1(i,k,j,kappa,beta,alpha),C2(i,k,j,kappa,beta,alpha));
+
+    T beta = beta_o_m*double(j),
+      kappa = kappa_o_m*double(j),
+      val=u(gam(i,k,j,kappa,beta,alpha),
+            C1(i,k,j,kappa,beta,alpha),
+            C2(i,k,j,kappa,beta,alpha));
     if(i == abs(k)){
-        if( k > 0){
-            val+= v_plus(xi(i,k,j,kappa,beta,alpha),d1(i,k,j,kappa,beta,alpha),d2(i,k,j,kappa,beta,alpha));
-        }
-        else{
-            val+= v_minus(xi(i,k,j,kappa,beta,alpha),d1(i,k,j,kappa,beta,alpha),d2(i,k,j,kappa,beta,alpha));
-        }
+        if( k > 0)
+            val += v_plus(xi(i,k,j,kappa,beta,alpha),
+                          d1(i,k,j,kappa,beta,alpha),
+                          d2(i,k,j,kappa,beta,alpha));
+        else
+            val += v_minus(xi(i,k,j,kappa,beta,alpha),
+                           d1(i,k,j,kappa,beta,alpha),
+                           d2(i,k,j,kappa,beta,alpha));
     }
     return(val);
 }
 
-// This is the main entry point to the code.
-TTVFasterResult<T>* compute_times (
+unsigned compute_ntransits (
+    // Input
     unsigned n_planets,
     const T* params,
     double t0,
     double tf,
-    unsigned m_max
+
+    // Output
+    unsigned* n_transits,
+    unsigned* starts
+) {
+    unsigned j, start = 0;
+    for (j = 0; j < n_planets; j++) {
+        T period = exp(params[j*7+2]);
+        n_transits[j] = ttv_to_int((tf - t0) / period + 1.0);
+        starts[j] = start;
+        start += n_transits[j];
+    }
+    return start;
+}
+
+// This is the main entry point to the code.
+//
+// The parameterization is a bit different from the Deck implementation:
+//
+// [
+//    log(mstar),
+//    log(m1), log(p1), sqrt(e1)*cos(arg peri1), i1, Omega1,
+//        sqrt(e1)*sin(arg peri1), TT1,
+//    ... same for the other planets
+// ]
+void compute_times (
+    // Input
+    unsigned n_planets,
+    const T* params,
+    double t0,
+    unsigned m_max,
+
+    // Output
+    unsigned* n_transits,
+    unsigned* starts,
+    T* times
 ) {
     T mstar = exp(params[0]);
 
@@ -438,23 +448,13 @@ TTVFasterResult<T>* compute_times (
               AJ20_arr(m_max+2),
               AJ11_arr(m_max+2);
 
-    // Compute the number of transits for each planet.
-    vector<unsigned> n_transits(n_planets);
-    TTVFasterResult<T>* times = new TTVFasterResult<T>(n_planets);
-    unsigned j;
-    for (j = 0; j < n_planets; j++) {
-        T period = exp(params[j*7+2]);
-        n_transits[j] = ttv_to_int((tf - t0) / period + 1.0);
-        times->set_ntransits(j, n_transits[j]);
-    }
-
     // "Keplerian" times
-    unsigned count;
+    unsigned j, count;
     for (j = 0; j < n_planets; j++) {
         T P1 = exp(params[j*7+2]),
           TT1 = params[j*7+7];
         for (count = 0; count < n_transits[j]; count++)
-            times->get_times(j)[count] = t0 + P1*double(count) + TT1;
+            times[starts[j]+count] = t0 + P1*double(count) + TT1;
     }
 
     // Now add TTVs; adjacent pairs only
@@ -488,9 +488,9 @@ TTVFasterResult<T>* compute_times (
         T alpha = pow(P1/P2, 2.0/3.0);
 
         for (count = 0; count < m_max+2; count++){
-            b[count] = laplace(T(0.5),count,0,alpha);
-            db[count] = laplace(T(0.5),count,1,alpha);
-            d2b[count] = laplace(T(0.5),count,2,alpha);
+            b[count] = laplace(0.5,count,0,alpha);
+            db[count] = laplace(0.5,count,1,alpha);
+            d2b[count] = laplace(0.5,count,2,alpha);
         }
 
         T kappa_over_m = (pow(alpha,-1.5)-1.0),
@@ -523,7 +523,7 @@ TTVFasterResult<T>* compute_times (
             }
 
             TTV *= m2/mstar/n1;
-            times->get_times(j)[count] += TTV;
+            times[starts[j] + count] += TTV;
         }
 
         // Outer planet of pair
@@ -545,14 +545,84 @@ TTVFasterResult<T>* compute_times (
             }
 
             TTV *= m1/mstar/n2;
-            times->get_times(i)[count] += TTV;
+            times[starts[i] + count] += TTV;
         }
     }
-
-    return times;
 }
 
 }; // TTVFaster
+
+
+// Helpers for Cython.
+unsigned compute_ntransits (
+    // Input
+    unsigned n_planets,
+    const double* params,
+    double t0,
+    double tf,
+
+    // Output
+    unsigned* n_transits,
+    unsigned* starts
+) {
+    TTVFaster<double> solver;
+    return solver.compute_ntransits(n_planets, params, t0, tf, n_transits, starts);
+}
+
+void compute_times (
+    // Input
+    unsigned n_planets,
+    const double* params,
+    double t0,
+    unsigned m_max,
+    unsigned* n_transits,
+    unsigned* starts,
+
+    // Output
+    double* times
+) {
+    // Run the solver.
+    TTVFaster<double> solver;
+    solver.compute_times(n_planets, params, t0, m_max, n_transits, starts, times);
+}
+
+template <int N>
+void compute_grad_times (
+    // Input
+    unsigned n_planets,
+    const double* params,
+    double t0,
+    unsigned m_max,
+    unsigned* n_transits,
+    unsigned* starts,
+
+    // Output
+    double* times,
+    double* grad_times
+) {
+    // Decorate the parameters with gradients.
+    Jet<double, N>* params2 = new Jet<double, N>[N];
+    for (unsigned i = 0; i < N; ++i) params2[i] = Jet<double, N>(params[i], i);
+
+    // Allocate times array.
+    unsigned ntot = n_transits[n_planets-1] + starts[n_planets-1];
+    Jet<double, N>* times2 = new Jet<double, N>[ntot];
+
+    // Run the solver.
+    TTVFaster<Jet<double, N> > solver;
+    solver.compute_times(n_planets, params2, t0, m_max, n_transits, starts, times2);
+
+    // Copy the gradients.
+    for (unsigned i = 0, n = 0; i < ntot; ++i) {
+        times[i] = times2[i].a;
+        for (unsigned j = 0; j < N; ++j, ++n) {
+            grad_times[n] = times2[i].v(j);
+        }
+    }
+
+    delete times2;
+    delete params2;
+}
 
 }; // namespace ttvfaster
 }; // namespace transit

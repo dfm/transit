@@ -10,6 +10,9 @@ cimport numpy as np
 DTYPE = np.float64
 ctypedef np.float64_t DTYPE_t
 
+DTYPE_u = np.uint32
+ctypedef np.uint32_t DTYPE_u_t
+
 
 cdef extern from "quad.h" namespace "transit":
     cdef cppclass QuadraticLimbDarkening:
@@ -24,10 +27,11 @@ cdef extern from *:
     ctypedef int kepler_3 "5+7*3"
     ctypedef int kepler_4 "5+7*4"
     ctypedef int kepler_5 "5+7*5"
-    ctypedef int kepler_6 "5+7*6"
-    ctypedef int kepler_7 "5+7*7"
-    ctypedef int kepler_8 "5+7*8"
-    ctypedef int kepler_9 "5+7*9"
+
+    ctypedef int ttvfaster_2 "1+7*2"
+    ctypedef int ttvfaster_3 "1+7*3"
+    ctypedef int ttvfaster_4 "1+7*4"
+    ctypedef int ttvfaster_5 "1+7*5"
 
 
 cdef extern from "integrator.h" namespace "transit":
@@ -58,18 +62,30 @@ cdef extern from "simple.h" namespace "transit":
         void* reparameterize (const void* const params)
 
 cdef extern from "ttvfaster.h" namespace "transit::ttvfaster":
-    cdef cppclass TTVFasterResult[T]:
-        unsigned get_ntransits (unsigned i)
-        T* get_times (unsigned i)
-
-    cdef cppclass TTVFaster[T]:
-        TTVFaster()
-        TTVFasterResult* compute_times (
-            unsigned n_planets,
-            T* params,
-            double t0,
-            double tf,
-            unsigned m_max)
+    unsigned compute_ntransits (
+        unsigned n_planets,
+        double* params,
+        double t0,
+        double tf,
+        unsigned* n_transits,
+        unsigned* starts)
+    void compute_times (
+        unsigned n_planets,
+        double* params,
+        double t0,
+        unsigned m_max,
+        unsigned* n_transits,
+        unsigned* starts,
+        double* times)
+    void compute_grad_times[N] (
+        unsigned n_planets,
+        double* params,
+        double t0,
+        unsigned m_max,
+        unsigned* n_transits,
+        unsigned* starts,
+        double* times,
+        double* grad_times)
 
 
 cdef class CythonSolver:
@@ -187,24 +203,55 @@ cdef class CythonSolver:
         return lc, gradient
 
     def approx_times(self,
-                     unsigned n_body,
+                     unsigned n_planets,
                      np.ndarray[DTYPE_t] params,
                      double tmin,
                      double tmax,
                      unsigned m_max):
-        cdef unsigned i, j, n
-        cdef double* times
-        cdef TTVFaster[double] solver = TTVFaster[double]()
-        cdef TTVFasterResult[double]* result
+        cdef unsigned i, j, n, ind
+        cdef np.ndarray[DTYPE_u_t] n_transits = np.empty(n_planets, dtype=DTYPE_u)
+        cdef np.ndarray[DTYPE_u_t] starts = np.empty(n_planets, dtype=DTYPE_u)
 
-        result = solver.compute_times(n_body, <double*>params.data,
-                                      tmin, tmax, m_max);
-        output_times = []
-        for i in range(n_body):
-            n = result.get_ntransits(i)
-            times = result.get_times(i)
-            output_times.append(np.empty(n, dtype=np.float64))
-            for j in range(n):
-                output_times[-1][j] = times[j]
-        del result
-        return output_times
+        cdef unsigned ntot = compute_ntransits (
+            n_planets, <double*>params.data, tmin, tmax,
+            <unsigned*>n_transits.data, <unsigned*>starts.data)
+
+        cdef np.ndarray[DTYPE_t] times = np.empty(ntot, dtype=DTYPE)
+        compute_times (
+            n_planets, <double*>params.data, tmin, m_max,
+            <unsigned*>n_transits.data, <unsigned*>starts.data,
+            <double*>times.data
+        )
+
+        del starts
+        return n_transits, times
+
+    def grad_approx_times(self,
+                          unsigned n_planets,
+                          np.ndarray[DTYPE_t] params,
+                          double tmin,
+                          double tmax,
+                          unsigned m_max):
+        cdef unsigned i, j, n, ind
+        cdef np.ndarray[DTYPE_u_t] n_transits = np.empty(n_planets, dtype=DTYPE_u)
+        cdef np.ndarray[DTYPE_u_t] starts = np.empty(n_planets, dtype=DTYPE_u)
+
+        cdef unsigned ntot = compute_ntransits (
+            n_planets, <double*>params.data, tmin, tmax,
+            <unsigned*>n_transits.data, <unsigned*>starts.data)
+
+        cdef np.ndarray[DTYPE_t] times = np.empty(ntot, dtype=DTYPE)
+        cdef np.ndarray[DTYPE_t, ndim=2] grad_times = \
+            np.empty((ntot, 1 + n_planets*7), dtype=DTYPE)
+
+        if n_planets == 2:
+            compute_grad_times[ttvfaster_2] (
+                n_planets, <double*>params.data, tmin, m_max,
+                <unsigned*>n_transits.data, <unsigned*>starts.data,
+                <double*>times.data, <double*>grad_times.data
+            )
+        else:
+            assert False
+
+        del starts
+        return n_transits, times, grad_times

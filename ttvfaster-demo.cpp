@@ -6,6 +6,7 @@
 
 
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include "ceres/jet.h"
 #include "ttvfaster.h"
@@ -23,29 +24,45 @@ int main () {
         log(0.00001027),  log(66.03300476), sqrt(e1)*cos(omega1), 1.57079637, -1.57079637, sqrt(e1)*sin(omega1), 142.63816833,
         log(0.00041269), log(125.85229492), sqrt(e2)*cos(omega2), 1.57079637, -1.57079637, sqrt(e2)*sin(omega2), 236.66268921
     };
+    for (unsigned i = 0; i < 15; ++i)
+        std::cout << std::setprecision(15) << params[i] << ", ";
+    std::cout << std::endl;
 
     // Start with the standard result.
-    TTVFasterResult<double>* result = TTVFaster<double>().compute_times(2, params, 0.0, 1600.0, 6);
-    for (unsigned i = 0; i < 2; ++i) {
-        for (unsigned j = 0; j < result->get_ntransits(i); ++j) {
-            std::cout << i << " " << j << " " << result->get_times(i)[j] << std::endl;
+    TTVFaster<double> solver1;
+
+    // Compute the number of transit.
+    unsigned* n_transits = new unsigned[2],
+            * starts = new unsigned[2];
+    unsigned ntot = solver1.compute_ntransits(2, params, 0.0, 1600.0, n_transits, starts);
+
+    // Run the solve.
+    double* times = new double[ntot];
+    solver1.compute_times(2, params, 0.0, 6, n_transits, starts, times);
+    for (unsigned i = 0, n = 0; i < 2; ++i) {
+        for (unsigned j = 0; j < n_transits[i]; ++j, ++n) {
+            std::cout << i << " " << j << " " << times[n] << std::endl;
         }
     }
-    delete result;
 
-    // Then the version with the gradients.
+    // Now get the gradients.
+    TTVFaster<Jet<double, 15> > solver2;
     Jet<double, 15>* params2 = new Jet<double, 15>[15];
     for (unsigned i = 0; i < 15; ++i) {
         params2[i] = Jet<double, 15>(params[i], i);
     }
-    TTVFasterResult<Jet<double, 15> >* result2 =
-        TTVFaster<Jet<double, 15> >().compute_times(2, params2, 0.0, 1600.0, 6);
-    for (unsigned i = 0; i < 2; ++i) {
-        for (unsigned j = 0; j < result2->get_ntransits(i); ++j) {
-            std::cout << i << " " << j << " " << result2->get_times(i)[j] << std::endl;
+
+    Jet<double, 15>* grad_times = new Jet<double, 15>[ntot];
+    solver2.compute_times(2, params2, 0.0, 6, n_transits, starts, grad_times);
+    for (unsigned i = 0, n = 0; i < 2; ++i) {
+        for (unsigned j = 0; j < n_transits[i]; ++j, ++n) {
+            std::cout << i << " " << j << " " << grad_times[n] << std::endl;
         }
     }
-    delete result2;
 
+    delete grad_times;
+    delete times;
+    delete n_transits;
+    delete starts;
     return 0;
 }
