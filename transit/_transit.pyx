@@ -69,7 +69,7 @@ cdef extern from "ttvfaster.h" namespace "transit::ttvfaster":
         double tf,
         unsigned* n_transits,
         unsigned* starts)
-    void compute_times (
+    int compute_times (
         unsigned n_planets,
         double* params,
         double t0,
@@ -77,7 +77,7 @@ cdef extern from "ttvfaster.h" namespace "transit::ttvfaster":
         unsigned* n_transits,
         unsigned* starts,
         double* times)
-    void compute_grad_times[N] (
+    int compute_grad_times[N] (
         unsigned n_planets,
         double* params,
         double t0,
@@ -177,22 +177,22 @@ cdef class CythonSolver:
             flag = integrator.gradient[kepler_1](
                 <double*>params.data, t.shape[0], <double*>t.data, texp,
                 <double*>lc.data, <double*>gradient.data)
-        elif n_body == 2:
-            flag = integrator.gradient[kepler_2](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
-        elif n_body == 3:
-            flag = integrator.gradient[kepler_3](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
-        elif n_body == 4:
-            flag = integrator.gradient[kepler_4](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
-        elif n_body == 5:
-            flag = integrator.gradient[kepler_5](
-                <double*>params.data, t.shape[0], <double*>t.data, texp,
-                <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 2:
+        #     flag = integrator.gradient[kepler_2](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 3:
+        #     flag = integrator.gradient[kepler_3](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 4:
+        #     flag = integrator.gradient[kepler_4](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
+        # elif n_body == 5:
+        #     flag = integrator.gradient[kepler_5](
+        #         <double*>params.data, t.shape[0], <double*>t.data, texp,
+        #         <double*>lc.data, <double*>gradient.data)
         else:
             raise ValueError("You're a maniac. Don't take the gradient of a "
                              "Kepler light curve with more than 5 planets!")
@@ -217,11 +217,14 @@ cdef class CythonSolver:
             <unsigned*>n_transits.data, <unsigned*>starts.data)
 
         cdef np.ndarray[DTYPE_t] times = np.empty(ntot, dtype=DTYPE)
-        compute_times (
+        cdef int flag = compute_times (
             n_planets, <double*>params.data, tmin, m_max,
             <unsigned*>n_transits.data, <unsigned*>starts.data,
             <double*>times.data
         )
+
+        if flag:
+            raise RuntimeError("no convergence")
 
         del starts
         return n_transits, times
@@ -243,15 +246,19 @@ cdef class CythonSolver:
         cdef np.ndarray[DTYPE_t] times = np.empty(ntot, dtype=DTYPE)
         cdef np.ndarray[DTYPE_t, ndim=2] grad_times = \
             np.empty((ntot, 1 + n_planets*7), dtype=DTYPE)
+        cdef int flag = 0
 
         if n_planets == 2:
-            compute_grad_times[ttvfaster_2] (
+            flag = compute_grad_times[ttvfaster_2] (
                 n_planets, <double*>params.data, tmin, m_max,
                 <unsigned*>n_transits.data, <unsigned*>starts.data,
                 <double*>times.data, <double*>grad_times.data
             )
         else:
             assert False
+
+        if flag:
+            raise RuntimeError("no convergence")
 
         del starts
         return n_transits, times, grad_times

@@ -136,8 +136,8 @@ def _test_gradient(s, eps=1.345e-7, **kwargs):
 
 def test_kepler_gradient(**kwargs):
     s = System(Central())
-    s.add_body(Body(period=3.0, mass=0.1, r=0.1, b=0.5, e=0.1, omega=0.5))
-    s.thaw_all_parameters()
+    s.add_body(Body(period=3.0, mass=0.1, radius=0.1, b=0.5, e=0.1, omega=0.5))
+    s.thaw_parameter("*")
     _test_gradient(s, **kwargs)
 
 
@@ -145,3 +145,10 @@ def test_simple_gradient(**kwargs):
     s = SimpleSystem(period=3.0, ror=0.1, impact=0.5, duration=0.1)
     s.thaw_all_parameters()
     _test_gradient(s, **kwargs)
+
+
+def test_modeling_protocol():
+    from george.modeling import supports_modeling_protocol
+    s = System(Central())
+    s.add_body(Body(period=3.0, mass=0.1, radius=0.1, b=0.5, e=0.1, omega=0.5))
+    assert supports_modeling_protocol(s, verbose=True)

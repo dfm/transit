@@ -7,8 +7,10 @@
 // MIT license.
 //
 
+#include <iostream>
 #include <cmath>
 #include <vector>
+#include <tr1/type_traits>
 
 #include "ceres/jet.h"
 
@@ -22,8 +24,9 @@ namespace ttvfaster {
 /*Many thanks for Jack Wisdom at MIT for sharing the code "laplace()" below with us. */
 /* the longitude of transit = 0 */
 /* Please cite Agol & Deck (2015) if you make use of this code in your research.*/
-#define LAPLACE_EPS   1.0e-10
-#define PI            M_PI
+#define LAPLACE_MAX_ITER   500
+#define LAPLACE_EPS        1.0e-10
+#define PI                 M_PI
 
 // Note: - this defines the unit system: Msun, Day, AU
 //       - this is different from the rest of the transit namespace.
@@ -49,8 +52,11 @@ template <typename T>
 class TTVFaster {
 public:
 
-TTVFaster () {};
+TTVFaster () : failure_flag(0) {};
 ~TTVFaster () {};
+
+// Keep track of failures.
+int failure_flag;
 
 // Constants for later use.
 T AJ00, AJ01, AJ02, AJ10, AJ20, AJ11;
@@ -59,22 +65,19 @@ T AJ00, AJ01, AJ02, AJ10, AJ20, AJ11;
 T laplace(double s, int i, int j, const T& a) {
     T as, term;
     double sum, factor1, factor2, factor3, factor4;
-    int k, q, q0;
+    int k, q, q0, iter;
 
     as = a*a;
 
     if(i<0) i = -i;
 
-    if(j<=i)     /* compute first term in sum */
-    {
+    if (j <= i) {
         factor4 = 1.0;
-        for(k=0; k<j; k++)
+        for(k = 0; k < j; k++)
             factor4 *= (i - k);
         sum = factor4;
         q0=0;
-    }
-    else
-    {
+    } else {
         q0 = (j + 1 - i) / 2;
         sum = 0.0;
         factor4 = 1.0;
@@ -85,22 +88,23 @@ T laplace(double s, int i, int j, const T& a) {
     factor1 = s;
     factor2 = s + i;
     factor3 = i + 1.0;
-    for(q=1;q<q0;q++)   /* no contribution for q = 0 */
-    {
+    for(q=1; q < q0; q++) {
         factor1 *= s + q;
         factor2 *= s + i + q;
         factor3 *= i + 1.0 + q;
     }
+
+    if (q0 > 1) q = q0;
+    else q = 1;
 
     term = as * factor1 * factor2 / (factor3 * q);
 
     /* sum series */
 
     T tsum = T(sum);
-    while(term*factor4 > LAPLACE_EPS)
-    {
+    for (iter = 0; iter < LAPLACE_MAX_ITER; ++iter) {
         factor4 = 1.0;
-        for(k=0;k<j;k++)
+        for(k = 0; k < j; k++)
             factor4 *= (2*q + i - k);
         tsum += term * factor4;
         factor1 += 1.0;
@@ -108,12 +112,14 @@ T laplace(double s, int i, int j, const T& a) {
         factor3 += 1.0;
         q++;
         term *= as * factor1 * factor2 / (factor3 * q);
-
+        if (term * factor4 <= LAPLACE_EPS) break;
     }
 
-    /* fix coefficient */
+    if (iter == LAPLACE_MAX_ITER)
+        failure_flag = 1;
 
-    for(k=0;k<i;k++)
+    /* fix coefficient */
+    for(k = 0; k < i; k++)
         tsum = tsum * (s + ((double) k))/(((double) k)+1.0);
 
     if(q0 <= 0)
@@ -423,7 +429,7 @@ unsigned compute_ntransits (
 //        sqrt(e1)*sin(arg peri1), TT1,
 //    ... same for the other planets
 // ]
-void compute_times (
+int compute_times (
     // Input
     unsigned n_planets,
     const T* params,
@@ -435,6 +441,8 @@ void compute_times (
     unsigned* starts,
     T* times
 ) {
+    failure_flag = 0;
+
     T mstar = exp(params[0]);
 
     // Pre-allocate some coefficient arrays.
@@ -485,12 +493,13 @@ void compute_times (
           n2 = 2.0*PI/P2;
 
         // ...
-        T alpha = pow(P1/P2, 2.0/3.0);
+        T alpha = exp(2.0 * (params[j*7+2] - params[i*7+2]) / 3.0);  // pow(P1 / P2, 2.0 / 3.0);
 
         for (count = 0; count < m_max+2; count++){
             b[count] = laplace(0.5,count,0,alpha);
             db[count] = laplace(0.5,count,1,alpha);
             d2b[count] = laplace(0.5,count,2,alpha);
+            if (failure_flag) return failure_flag;
         }
 
         T kappa_over_m = (pow(alpha,-1.5)-1.0),
@@ -548,6 +557,8 @@ void compute_times (
             times[starts[i] + count] += TTV;
         }
     }
+
+    return failure_flag;
 }
 
 }; // TTVFaster
@@ -569,7 +580,7 @@ unsigned compute_ntransits (
     return solver.compute_ntransits(n_planets, params, t0, tf, n_transits, starts);
 }
 
-void compute_times (
+int compute_times (
     // Input
     unsigned n_planets,
     const double* params,
@@ -583,11 +594,11 @@ void compute_times (
 ) {
     // Run the solver.
     TTVFaster<double> solver;
-    solver.compute_times(n_planets, params, t0, m_max, n_transits, starts, times);
+    return solver.compute_times(n_planets, params, t0, m_max, n_transits, starts, times);
 }
 
 template <int N>
-void compute_grad_times (
+int compute_grad_times (
     // Input
     unsigned n_planets,
     const double* params,
@@ -610,7 +621,8 @@ void compute_grad_times (
 
     // Run the solver.
     TTVFaster<Jet<double, N> > solver;
-    solver.compute_times(n_planets, params2, t0, m_max, n_transits, starts, times2);
+    int flag = solver.compute_times(n_planets, params2, t0, m_max, n_transits, starts, times2);
+    if (flag) return flag;
 
     // Copy the gradients.
     for (unsigned i = 0, n = 0; i < ntot; ++i) {
@@ -622,6 +634,8 @@ void compute_grad_times (
 
     delete times2;
     delete params2;
+
+    return 0;
 }
 
 }; // namespace ttvfaster

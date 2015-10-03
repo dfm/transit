@@ -9,6 +9,7 @@ try:
 except ImportError:
     izip, imap = zip, map
 
+import fnmatch
 import logging
 import numpy as np
 from ._transit import CythonSolver
@@ -468,7 +469,7 @@ class System(object):
         f, df = CythonSolver().kepler_gradient(len(self.bodies),
                                                self._get_params(),
                                                t, texp, tol, maxdepth)
-        return f, df[:, self.unfrozen]
+        return f, df[:, self.unfrozen].T
 
     def __len__(self):
         return np.sum(self.unfrozen)
@@ -483,9 +484,22 @@ class System(object):
         names += ["central:q1", "central:q2"]
         return names
 
-    def get_parameter_names(self):
+    def get_parameter_names(self, full=False):
+        if full:
+            return self._parameter_names()
         return [n for n, f in zip(self._parameter_names(), self.unfrozen)
                 if f]
+
+    def check_vector(self, vector):
+        params = self._get_params()
+        params[self.unfrozen] = vector
+        for i, body in enumerate(self.bodies):
+            n = 3 + 7 * i
+            ecosp, esinp = params[n+3:n+5]
+            e = ecosp**2 + esinp**2
+            if not 0 <= e < 1.0:
+                return False
+        return True
 
     def get_vector(self):
         return self._get_params()[self.unfrozen]
@@ -516,6 +530,9 @@ class System(object):
     def set_vector(self, vector):
         params = self._get_params()
         params[self.unfrozen] = vector
+        self._set_params(params)
+
+    def _set_params(self, params):
         self.central.flux = np.exp(params[0])
         self.central.radius = np.exp(params[1])
         self.central.mass = np.exp(params[2])
@@ -544,15 +561,49 @@ class System(object):
         return self.light_curve_gradient(t, **kwargs)[1]
 
     def freeze_parameter(self, parameter_name):
-        i = self._parameter_names().index(parameter_name)
-        self.unfrozen[i] = False
+        any_ = False
+        for i, k in enumerate(self._parameter_names()):
+            if not fnmatch.fnmatch(k, parameter_name):
+                continue
+            any_ = True
+            self.unfrozen[i] = False
+        if not any_:
+            raise ValueError("unknown parameter '{0}'".format(parameter_name))
 
     def thaw_parameter(self, parameter_name):
-        i = self._parameter_names().index(parameter_name)
-        self.unfrozen[i] = True
+        any_ = False
+        for i, k in enumerate(self._parameter_names()):
+            if not fnmatch.fnmatch(k, parameter_name):
+                continue
+            any_ = True
+            self.unfrozen[i] = True
+        if not any_:
+            raise ValueError("unknown parameter '{0}'".format(parameter_name))
 
-    def freeze_all_parameters(self):
-        self.unfrozen[:] = False
+    def get_parameter(self, parameter_name):
+        vector = self._get_params()
+        params = []
+        for i, k in enumerate(self._parameter_names()):
+            if not fnmatch.fnmatch(k, parameter_name):
+                continue
+            params.append(vector[i])
+        if len(params) == 0:
+            raise ValueError("unknown parameter '{0}'".format(parameter_name))
+        if len(params) == 1:
+            return params[0]
+        return np.array(params)
 
-    def thaw_all_parameters(self):
-        self.unfrozen[:] = True
+    def set_parameter(self, parameter_name, value):
+        vector = self._get_params()
+        any_ = False
+        for i, k in enumerate(self._parameter_names()):
+            if not fnmatch.fnmatch(k, parameter_name):
+                continue
+            any_ = True
+            vector[i] = value
+        if not any_:
+            raise ValueError("unknown parameter '{0}'".format(parameter_name))
+        self._set_params(vector)
+
+    def get_bounds(self):
+        return [(None, None) for _ in range(len(self))]
