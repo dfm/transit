@@ -12,44 +12,6 @@ except ImportError:
     from distutils.command.build_ext import build_ext as _build_ext
 
 
-def find_boost(hint=None, verbose=True):
-    """
-    Find the location of the Boost include directory. This will return
-    ``None`` on failure.
-
-    """
-    # List the standard locations including a user supplied hint.
-    search_dirs = [] if hint is None else hint
-    search_dirs += [
-        "/usr/local/include",
-        "/usr/local/homebrew/include",
-        "/opt/local/var/macports/software",
-        "/opt/local/include",
-        "/usr/include",
-        "/usr/include/local",
-    ]
-
-    # Loop over search paths and check for the existence of the required
-    # header.
-    for d in search_dirs:
-        path = os.path.join(d, "boost", "math", "special_functions",
-                            "ellint_3.hpp")
-        if os.path.exists(path):
-            # Determine the version.
-            vf = os.path.join(d, "boost", "version.hpp")
-            if not os.path.exists(vf):
-                continue
-            src = open(vf, "r").read()
-            v = re.findall("#define BOOST_LIB_VERSION \"(.+)\"", src)
-            if not len(v):
-                continue
-            v = v[0]
-            if verbose:
-                print("Found Boost version {0} in: {1}".format(v, d))
-            return d
-    return None
-
-
 def find_eigen(hint=None):
     """
     Find the location of the Eigen 3 include directory. This will return
@@ -98,12 +60,6 @@ class build_ext(_build_ext):
     def build_extension(self, ext):
         dirs = ext.include_dirs + self.compiler.include_dirs
 
-        # Look for the Boost headers and make sure that we can find them.
-        boost_include = find_boost(hint=dirs)
-        if boost_include is None:
-            raise RuntimeError("Required library Boost not found. "
-                               "Check the documentation for solutions.")
-
         # Look for the Eigen headers and make sure that we can find them.
         eigen_include = find_eigen(hint=dirs)
         if eigen_include is None:
@@ -111,7 +67,7 @@ class build_ext(_build_ext):
                                "Check the documentation for solutions.")
 
         # Update the extension's include directories.
-        ext.include_dirs += [eigen_include, boost_include]
+        ext.include_dirs += [eigen_include]
 
         # Run the standard build procedure.
         _build_ext.build_extension(self, ext)
