@@ -49,35 +49,39 @@ public:
     NumericalLimbDarkening (LimbDarkeningLaw* law, double tol,
                             int maxiter, int iterstep)
         : tol_(tol), maxiter_(maxiter), iterstep_(iterstep), law_(law) {};
-    double operator () (double p, double z) const {
+
+    template <typename T>
+    T operator () (const T* const params, const T& p, const T& z) const {
+        T q1 = params[0], q2 = 2.0 * params[1],
+          u1 = q1 * q2, u2 = q1 * (1.0 - q2);
+
         z = fabs(z);
-        double zmp = fmin(fmax(z - p, 0), 1),
-               zpp = fmin(fmax(z + p, 0), 1);
-        if (zpp <= zmp) return 1.0;
+        double zmp = fmin(fmax(z - p, 0.0), 1.0),
+               zpp = fmin(fmax(z + p, 0.0), 1.0);
+        if (zpp <= zmp) return T(1.0);
 
         // Iterate the integration to convergence.
-        double norm = law_->get_norm(),
-               value = integrate(zmp, zpp, p, z, 1) / norm,
-               value0 = value;
+        T norm = law_->get_norm(),
+          value = integrate(zmp, zpp, p, z, 1) / norm,
+          value0 = value;
         for (int i = 1; i <= maxiter_; i += iterstep_) {
             value = integrate(zmp, zpp, p, z, i+1) / norm;
             if (value != value) {
-                std::cout << zmp << " " << zpp << " " << norm << " " << i << " NaN in integral\n";
                 return 1.0 - value0;
             }
             if (fabs(value - value0) < tol_) {
-                /* std::cout << "Converged after " << i << " iterations\n"; */
                 return 1.0 - value;
             }
             value0 = value;
         }
-        std::cout << "No convergence\n";
+        std::cerr << "No convergence\n";
         return 1.0 - value;
     };
 
-    double integrate (double a, double b, double p, double z, int N) const {
-        double result = 0.0, r0 = a, oa0 = 0.0, area0 = a*a,
-               r, dr = (b - a) / N, oa, area;
+    template <typename T>
+    T integrate (const T& a, const T& b, const T& p, const T& z, int N) const {
+        T result = T(0.0), r0 = a, oa0 = T(0.0), area0 = a*a,
+          r, dr = (b - a) / N, oa, area;
         for (int i = 1; i <= N; ++i) {
             // Compute the areas at this radius.
             r = a + i*dr;
