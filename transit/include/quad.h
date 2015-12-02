@@ -46,7 +46,7 @@ public:
     T operator () (const T* const params, const T& p, const T& z0) const
     {
         int kk = 0, ee = 0, pp = 0;
-        T q1 = params[0], q2 = 2.0 * params[1],
+        T q1 = sqrt(params[0]), q2 = 2.0 * params[1],
           u1 = q1 * q2, u2 = q1 * (1.0 - q2),
           w0, w1, w2,
           f0 = T(0.0), f1 = T(0.0), fk = T(0.0), fe = T(0.0), fp = T(0.0),
