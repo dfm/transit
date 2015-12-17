@@ -102,6 +102,7 @@ class SimpleSystem(object):
         t = np.atleast_1d(t)
         f, df = CythonSolver().simple_gradient(self._get_params(),
                                                t, texp, tol, maxdepth)
+
         return f, df
 
     def __len__(self):
@@ -111,7 +112,9 @@ class SimpleSystem(object):
         return ["ln_ror", "ln_period", "t0", "impact", "ln_duration",
                 "q1", "q2"]
 
-    def get_parameter_names(self):
+    def get_parameter_names(self, full=False):
+        if full:
+            return self._parameter_names()
         return [n for n, f in zip(self._parameter_names(), self.unfrozen)
                 if f]
 
@@ -126,8 +129,11 @@ class SimpleSystem(object):
     def get_vector(self):
         return self._get_params()[self.unfrozen]
 
+    def check_vector(self, *args):
+        return True
+
     def set_vector(self, vector):
-        p = self.get_vector()
+        p = self._get_params()
         p[self.unfrozen] = vector
         self.ror = np.exp(p[0])
         self.period = np.exp(p[1])
@@ -141,7 +147,13 @@ class SimpleSystem(object):
         return self.light_curve(t, **kwargs)
 
     def get_gradient(self, t, **kwargs):
-        return self.light_curve_gradient(t, **kwargs)[1]
+        return self.light_curve_gradient(t, **kwargs)[1][:, self.unfrozen].T
+
+    def get_parameter(self, *args):
+        raise NotImplementedError()
+
+    def set_parameter(self, *args):
+        raise NotImplementedError()
 
     def freeze_parameter(self, parameter_name):
         i = self._parameter_names().index(parameter_name)
@@ -151,8 +163,5 @@ class SimpleSystem(object):
         i = self._parameter_names().index(parameter_name)
         self.unfrozen[i] = True
 
-    def freeze_all_parameters(self):
-        self.unfrozen[:] = False
-
-    def thaw_all_parameters(self):
-        self.unfrozen[:] = True
+    def get_bounds(self):
+        return [(None, None) for _ in range(len(self))]
