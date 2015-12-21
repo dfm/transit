@@ -140,8 +140,8 @@ class SimpleSystem(object):
         self.t0 = p[2]
         self.impact = p[3]
         self.duration = np.exp(p[4])
-        self.q1 = 1.0 / (1. + np.exp(-p[5]))
-        self.q2 = 1.0 / (1. + np.exp(-p[6]))
+        self.q1 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-p[5]))))
+        self.q2 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-p[6]))))
 
     def get_value(self, t, **kwargs):
         return self.light_curve(t, **kwargs)
