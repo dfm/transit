@@ -35,8 +35,8 @@ public:
         result[1] = exp(params[1]);
         result[2] = params[2];
         result[3] = params[3] * params[3];
-        result[4] = exp(params[5]) / (1.0 + exp(params[5]));
-        result[5] = exp(params[6]) / (1.0 + exp(params[6]));
+        result[4] = 1.0 / (1.0 + exp(-params[5]));
+        result[5] = 1.0 / (1.0 + exp(-params[6]));
         result[6] = 2.0 * sqrt(rorp1 * rorp1 - result[3]) / exp(params[4]);
         return result;
     }

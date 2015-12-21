@@ -110,7 +110,7 @@ class SimpleSystem(object):
 
     def _parameter_names(self):
         return ["ln_ror", "ln_period", "t0", "impact", "ln_duration",
-                "q1", "q2"]
+                "q1_param", "q2_param"]
 
     def get_parameter_names(self, full=False):
         if full:
@@ -140,8 +140,8 @@ class SimpleSystem(object):
         self.t0 = p[2]
         self.impact = p[3]
         self.duration = np.exp(p[4])
-        self.q1 = np.exp(p[5]) / (1. + np.exp(p[5]))
-        self.q2 = np.exp(p[6]) / (1. + np.exp(p[6]))
+        self.q1 = 1.0 / (1. + np.exp(-p[5]))
+        self.q2 = 1.0 / (1. + np.exp(-p[6]))
 
     def get_value(self, t, **kwargs):
         return self.light_curve(t, **kwargs)
