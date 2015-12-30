@@ -509,8 +509,8 @@ class System(object):
         params[0] = np.log(self.central.flux)
         params[1] = np.log(self.central.radius)
         params[2] = np.log(self.central.mass)
-        params[-2] = self.central.q1
-        params[-1] = self.central.q2
+        params[-2] = np.log(self.central.q1)-np.log(1.0-self.central.q1),
+        params[-1] = np.log(self.central.q2)-np.log(1.0-self.central.q2),
 
         for i, body in enumerate(self.bodies):
             n = 3 + 7 * i
@@ -536,8 +536,8 @@ class System(object):
         self.central.flux = np.exp(params[0])
         self.central.radius = np.exp(params[1])
         self.central.mass = np.exp(params[2])
-        self.central.q1 = params[-2]
-        self.central.q2 = params[-1]
+        self.central.q1 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-2]))))
+        self.central.q2 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-1]))))
 
         for i, body in enumerate(self.bodies):
             n = 3 + 7 * i
