@@ -607,3 +607,23 @@ class System(object):
 
     def get_bounds(self):
         return [(None, None) for _ in range(len(self))]
+
+    def jacobian(self):
+        star = self.central
+        j = 0
+        q = star.q1
+        j += np.log(q) + np.log(1.0 - q)
+        q = star.q2
+        j += np.log(q) + np.log(1.0 - q)
+        return j
+
+    def jacobian_gradient(self):
+        names = self.get_parameter_names()
+        j = np.zeros(len(names))
+        if "central:q1" in names:
+            q = self.central.q1
+            j[names.index("central:q1")] = 1. / q - 1. / (1.0 - q)
+        if "central:q2" in names:
+            q = self.central.q2
+            j[names.index("central:q2")] = 1. / q - 1. / (1.0 - q)
+        return j
