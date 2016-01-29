@@ -622,8 +622,8 @@ class System(object):
         j = np.zeros(len(names))
         if "central:q1" in names:
             q = self.central.q1
-            j[names.index("central:q1")] = 1. / q - 1. / (1.0 - q)
+            j[names.index("central:q1")] = 1. - 2*q
         if "central:q2" in names:
             q = self.central.q2
-            j[names.index("central:q2")] = 1. / q - 1. / (1.0 - q)
+            j[names.index("central:q2")] = 1. - 2*q
         return j
