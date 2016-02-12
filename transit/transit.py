@@ -2,17 +2,17 @@
 
 from __future__ import division, print_function
 
+import fnmatch
+import logging
+import numpy as np
+from ._transit import CythonSolver
+
 __all__ = ["Central", "Body", "System"]
 
 try:
     from itertools import izip, imap
 except ImportError:
     izip, imap = zip, map
-
-import fnmatch
-import logging
-import numpy as np
-from ._transit import CythonSolver
 
 
 # Newton's constant in $R_\odot^3 M_\odot^{-1} {days}^{-2}$.
@@ -46,11 +46,14 @@ class Central(object):
 
     """
 
-    def __init__(self, mass=1.0, radius=1.0, flux=1.0, q1=None, q2=None,
-                 mu1=None, mu2=None):
+    def __init__(self, mass=1.0, radius=1.0, flux=1.0, dilution=0.0,
+                 q1=None, q2=None, mu1=None, mu2=None):
         self.mass = mass
         self.radius = radius
         self.flux = flux
+        if not 0.0 <= dilution <= 1.0:
+            raise ValueError("'dilution' must be between 0 and 1")
+        self.dilution = dilution
 
         # Allow different limb darkening parameters.
         if mu1 is not None and mu2 is not None:
@@ -402,7 +405,7 @@ class System(object):
         self.central.system = self
         self.bodies = []
         self.iobs = iobs
-        self.unfrozen = np.zeros(5, dtype=bool)
+        self.unfrozen = np.zeros(6, dtype=bool)
 
     def add_body(self, body):
         """
@@ -481,7 +484,7 @@ class System(object):
                          ("ln_radius", "ln_mass", "t0",
                           "sqrt_e_cos_omega", "sqrt_e_sin_omega",
                           "sqrt_a_cos_i", "sqrt_a_sin_i"))
-        names += ["central:q1", "central:q2"]
+        names += ["central:q1", "central:q2", "central:dilution"]
         return names
 
     def get_parameter_names(self, full=False):
@@ -505,12 +508,14 @@ class System(object):
         return self._get_params()[self.unfrozen]
 
     def _get_params(self):
-        params = np.empty(5+7*len(self.bodies))
+        params = np.empty(6+7*len(self.bodies))
         params[0] = np.log(self.central.flux)
         params[1] = np.log(self.central.radius)
         params[2] = np.log(self.central.mass)
-        params[-2] = np.log(self.central.q1)-np.log(1.0-self.central.q1)
-        params[-1] = np.log(self.central.q2)-np.log(1.0-self.central.q2)
+        params[-3] = np.log(self.central.q1)-np.log(1.0-self.central.q1)
+        params[-2] = np.log(self.central.q2)-np.log(1.0-self.central.q2)
+        params[-1] = \
+            np.log(self.central.dilution)-np.log(1.0-self.central.dilution)
 
         for i, body in enumerate(self.bodies):
             n = 3 + 7 * i
@@ -536,8 +541,10 @@ class System(object):
         self.central.flux = np.exp(params[0])
         self.central.radius = np.exp(params[1])
         self.central.mass = np.exp(params[2])
-        self.central.q1 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-2]))))
-        self.central.q2 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-1]))))
+        self.central.q1 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-3]))))
+        self.central.q2 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-2]))))
+        self.central.dilution = \
+            max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-1]))))
 
         for i, body in enumerate(self.bodies):
             n = 3 + 7 * i
@@ -615,6 +622,8 @@ class System(object):
         j += np.log(q) + np.log(1.0 - q)
         q = star.q2
         j += np.log(q) + np.log(1.0 - q)
+        q = star.dilution
+        j += np.log(q) + np.log(1.0 - q)
         return j
 
     def jacobian_gradient(self):
@@ -626,4 +635,7 @@ class System(object):
         if "central:q2" in names:
             q = self.central.q2
             j[names.index("central:q2")] = 1. - 2*q
+        if "central:dilution" in names:
+            q = self.central.dilution
+            j[names.index("central:dilution")] = 1. - 2*q
         return j

@@ -21,14 +21,14 @@ cdef extern from "quad.h" namespace "transit":
 
 cdef extern from *:
     ctypedef int simple_type "7"
-    ctypedef int kepler_0 "5"
-    ctypedef int kepler_1 "5+7"
-    ctypedef int kepler_2 "5+7*2"
-    ctypedef int kepler_3 "5+7*3"
-    ctypedef int kepler_4 "5+7*4"
-    ctypedef int kepler_5 "5+7*5"
-    ctypedef int kepler_6 "5+7*6"
-    ctypedef int kepler_7 "5+7*7"
+    ctypedef int kepler_0 "6"
+    ctypedef int kepler_1 "6+7"
+    ctypedef int kepler_2 "6+7*2"
+    ctypedef int kepler_3 "6+7*3"
+    ctypedef int kepler_4 "6+7*4"
+    ctypedef int kepler_5 "6+7*5"
+    ctypedef int kepler_6 "6+7*6"
+    ctypedef int kepler_7 "6+7*7"
 
     ctypedef int ttvfaster_2 "1+7*2"
     ctypedef int ttvfaster_3 "1+7*3"

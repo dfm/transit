@@ -124,14 +124,15 @@ public:
         //
         //  (TODO: [ln(q_1 / (1 - q_1)), ln(q_2 / (1 - q_2))])
         //
-        T* result = new T[4 + 9 * n_body_];
+        T* result = new T[5 + 9 * n_body_];
         T m_central = exp(params[2]);
 
         // Central parameters.
-        result[0]              = exp(params[0]);         // Flux
-        result[1]              = exp(params[1]);         // Radius
+        result[0]              = exp(params[0]);                             // Flux
+        result[1]              = exp(params[1]);                             // Radius
         result[2+9*n_body_]    = 1.0 / (1.0 + exp(-params[3+7*n_body_]));    // q1
         result[2+9*n_body_+1]  = 1.0 / (1.0 + exp(-params[3+7*n_body_+1]));  // q2
+        result[2+9*n_body_+2]  = 1.0 / (1.0 + exp(-params[3+7*n_body_+2]));  // dilution
 
         int i, j, n;
         for (i = 0, j = 3, n = 2; i < n_body_; ++i, j += 7, n += 9) {
@@ -195,7 +196,7 @@ public:
     template <typename T>
     T operator () (const T* const params, const double t) {
         int i, n, nld = 2 + 9 * n_body_;
-        T z, lam = params[0], pos[3] = {T(0.0), T(0.0), T(0.0)};
+        T z, lam = T(1.0), pos[3] = {T(0.0), T(0.0), T(0.0)};
         for (i = 0, n = 2; i < n_body_; ++i, n += 9) {
             // Solve Kepler's equation for the position of the body.
             position(&(params[n]), t, pos);
@@ -209,7 +210,7 @@ public:
                 lam *= ld_(&(params[nld]), params[n] / params[1], z / params[1]);
             }
         }
-        return lam;
+        return params[0] * ((1.0 - params[nld+2]) * lam + params[nld+2]);
     };
 
 private:
