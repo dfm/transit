@@ -618,12 +618,16 @@ class System(object):
     def jacobian(self):
         star = self.central
         j = 0
-        q = star.q1
-        j += np.log(q) + np.log(1.0 - q)
-        q = star.q2
-        j += np.log(q) + np.log(1.0 - q)
-        q = star.dilution
-        j += np.log(q) + np.log(1.0 - q)
+        names = self.get_parameter_names()
+        if "central:q1" in names:
+            q = star.q1
+            j += np.log(q) + np.log(1.0 - q)
+        if "central:q2" in names:
+            q = star.q2
+            j += np.log(q) + np.log(1.0 - q)
+        if "central:dilution" in names:
+            q = star.dilution
+            j += np.log(q) + np.log(1.0 - q)
         return j
 
     def jacobian_gradient(self):
