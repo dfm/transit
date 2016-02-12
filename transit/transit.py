@@ -617,7 +617,7 @@ class System(object):
 
     def jacobian(self):
         star = self.central
-        j = 0
+        j = 0.0
         names = self.get_parameter_names()
         if "central:q1" in names:
             q = star.q1
