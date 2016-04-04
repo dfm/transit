@@ -132,7 +132,7 @@ public:
         result[1]              = exp(params[1]);                             // Radius
         result[2+9*n_body_]    = 1.0 / (1.0 + exp(-params[3+7*n_body_]));    // q1
         result[2+9*n_body_+1]  = 1.0 / (1.0 + exp(-params[3+7*n_body_+1]));  // q2
-        result[2+9*n_body_+2]  = 1.0 / (1.0 + exp(-params[3+7*n_body_+2]));  // dilution
+        result[2+9*n_body_+2]  = params[3+7*n_body_+2];  // 1.0 / (1.0 + exp(-params[3+7*n_body_+2]));  // dilution
 
         int i, j, n;
         for (i = 0, j = 3, n = 2; i < n_body_; ++i, j += 7, n += 9) {

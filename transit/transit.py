@@ -514,8 +514,8 @@ class System(object):
         params[2] = np.log(self.central.mass)
         params[-3] = np.log(self.central.q1)-np.log(1.0-self.central.q1)
         params[-2] = np.log(self.central.q2)-np.log(1.0-self.central.q2)
-        params[-1] = \
-            np.log(self.central.dilution)-np.log(1.0-self.central.dilution)
+        params[-1] = self.central.dilution
+        # np.log(self.central.dilution)-np.log(1.0-self.central.dilution)
 
         for i, body in enumerate(self.bodies):
             n = 3 + 7 * i
@@ -543,8 +543,8 @@ class System(object):
         self.central.mass = np.exp(params[2])
         self.central.q1 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-3]))))
         self.central.q2 = max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-2]))))
-        self.central.dilution = \
-            max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-1]))))
+        self.central.dilution = params[-1]
+        # max(0.0, min(1.0, 1.0 / (1. + np.exp(-params[-1]))))
 
         for i, body in enumerate(self.bodies):
             n = 3 + 7 * i
@@ -555,7 +555,7 @@ class System(object):
 
             ecosp, esinp = params[n+3:n+5]
             body.e = ecosp**2 + esinp**2
-            body.pomega = np.arctan2(esinp, ecosp)
+            body.omega = np.arctan2(esinp, ecosp)
 
             ax, ay = params[n+5:n+7]
             body.a = ax**2 + ay**2
@@ -625,9 +625,9 @@ class System(object):
         if "central:q2" in names:
             q = star.q2
             j += np.log(q) + np.log(1.0 - q)
-        if "central:dilution" in names:
-            q = star.dilution
-            j += np.log(q) + np.log(1.0 - q)
+        # if "central:dilution" in names:
+        #     q = star.dilution
+        #     j += np.log(q) + np.log(1.0 - q)
         return j
 
     def jacobian_gradient(self):
@@ -639,7 +639,7 @@ class System(object):
         if "central:q2" in names:
             q = self.central.q2
             j[names.index("central:q2")] = 1. - 2*q
-        if "central:dilution" in names:
-            q = self.central.dilution
-            j[names.index("central:dilution")] = 1. - 2*q
+        # if "central:dilution" in names:
+        #     q = self.central.dilution
+        #     j[names.index("central:dilution")] = 1. - 2*q
         return j
