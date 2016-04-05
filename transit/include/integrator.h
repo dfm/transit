@@ -74,7 +74,7 @@ public:
         for (i = 0; i < N; ++i) params2[i] = Jet<double, N>(params[i], i);
 
         Jet<double, N>* reparams = solver_.reparameterize(params2);
-        delete params2;
+        delete[] params2;
 
         for (i = 0; i < nt; ++i) {
             Jet<double, N> v = integrate(reparams, t[i], texp);

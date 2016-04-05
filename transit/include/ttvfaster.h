@@ -632,8 +632,8 @@ int compute_grad_times (
         }
     }
 
-    delete times2;
-    delete params2;
+    delete[] times2;
+    delete[] params2;
 
     return 0;
 }
