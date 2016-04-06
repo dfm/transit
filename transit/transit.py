@@ -425,7 +425,7 @@ class System(object):
     def _get_solver(self):
         return CythonSolver()
 
-    def light_curve(self, t, texp=0.0, tol=1e-8, maxdepth=4):
+    def light_curve(self, t, texp=0.0, tol=1e-8, maxdepth=4, use_batman=False):
         """
         Get the light curve evaluated at a list of times using the current
         model.
@@ -446,7 +446,8 @@ class System(object):
 
         return CythonSolver().kepler_light_curve(len(self.bodies),
                                                  self._get_params(),
-                                                 t, texp, tol, maxdepth)
+                                                 t, texp, tol, maxdepth,
+                                                 use_batman=use_batman)
 
     def light_curve_gradient(self, t, texp=0.0, tol=1e-8, maxdepth=4):
         """

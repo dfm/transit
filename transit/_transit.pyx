@@ -103,11 +103,11 @@ cdef class CythonSolver:
         cdef double* reparams
         cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator
         cdef Integrator[SimpleSolver[BatmanLimbDarkening] ] batman_integrator
-
         if use_batman:
             batman_integrator = Integrator[SimpleSolver[BatmanLimbDarkening] ] (tol, maxdepth)
         else:
             integrator = Integrator[SimpleSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
+
         # Compute the light curve.
         cdef np.ndarray[DTYPE_t] lc = np.empty(t.shape[0], dtype=DTYPE)
         cdef int flag
@@ -132,8 +132,12 @@ cdef class CythonSolver:
                         double texp, double tol, int maxdepth,
                         use_batman=False):
         cdef double* reparams
-        cdef Integrator[SimpleSolver[BatmanLimbDarkening] ] integrator = \
-            Integrator[SimpleSolver[BatmanLimbDarkening] ] (tol, maxdepth)
+        cdef Integrator[SimpleSolver[QuadraticLimbDarkening] ] integrator
+        cdef Integrator[SimpleSolver[BatmanLimbDarkening] ] batman_integrator
+        if use_batman:
+            batman_integrator = Integrator[SimpleSolver[BatmanLimbDarkening] ] (tol, maxdepth)
+        else:
+            integrator = Integrator[SimpleSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
 
         # Compute the light curve.
         cdef np.ndarray[DTYPE_t] lc = np.empty(t.shape[0], dtype=DTYPE)
@@ -142,9 +146,14 @@ cdef class CythonSolver:
 
         cdef int flag
 
-        flag = integrator.gradient[simple_type](
-            <double*>params.data, t.shape[0], <double*>t.data, texp,
-            <double*>lc.data, <double*>gradient.data)
+        if use_batman:
+            flag = batman_integrator.gradient[simple_type](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
+        else:
+            flag = integrator.gradient[simple_type](
+                <double*>params.data, t.shape[0], <double*>t.data, texp,
+                <double*>lc.data, <double*>gradient.data)
 
         if flag:
             raise RuntimeError("the solver failed with code={0}".format(flag))
@@ -155,19 +164,35 @@ cdef class CythonSolver:
                            int n_body,
                            np.ndarray[DTYPE_t] params,
                            np.ndarray[DTYPE_t] t,
-                           double texp, double tol, int maxdepth):
+                           double texp, double tol, int maxdepth,
+                           use_batman=False):
         cdef double* reparams
-        cdef Integrator[KeplerSolver[BatmanLimbDarkening] ] integrator = \
-            Integrator[KeplerSolver[BatmanLimbDarkening] ] (tol, maxdepth)
-        integrator.get_solver().set_n_body(n_body)
+        cdef Integrator[KeplerSolver[QuadraticLimbDarkening] ] integrator
+        cdef Integrator[KeplerSolver[BatmanLimbDarkening] ] batman_integrator
+
+        if use_batman:
+            batman_integrator = Integrator[KeplerSolver[BatmanLimbDarkening] ] (tol, maxdepth)
+            batman_integrator.get_solver().set_n_body(n_body)
+        else:
+            integrator = Integrator[KeplerSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
+            integrator.get_solver().set_n_body(n_body)
 
         # Compute the light curve.
         cdef np.ndarray[DTYPE_t] lc = np.empty(t.shape[0], dtype=DTYPE)
-        cdef int flag = integrator.integrate(<double*>params.data,
-                                             t.shape[0],
-                                             <double*>t.data,
-                                             texp,
-                                             <double*>lc.data)
+        cdef int flag
+
+        if use_batman:
+            flag = batman_integrator.integrate(<double*>params.data,
+                                               t.shape[0],
+                                               <double*>t.data,
+                                               texp,
+                                               <double*>lc.data)
+        else:
+            flag = integrator.integrate(<double*>params.data,
+                                        t.shape[0],
+                                        <double*>t.data,
+                                        texp,
+                                        <double*>lc.data)
 
         return lc
 
@@ -177,8 +202,8 @@ cdef class CythonSolver:
                         np.ndarray[DTYPE_t] t,
                         double texp, double tol, int maxdepth):
         cdef double* reparams
-        cdef Integrator[KeplerSolver[BatmanLimbDarkening] ] integrator = \
-            Integrator[KeplerSolver[BatmanLimbDarkening] ] (tol, maxdepth)
+        cdef Integrator[KeplerSolver[QuadraticLimbDarkening] ] integrator = \
+            Integrator[KeplerSolver[QuadraticLimbDarkening] ] (tol, maxdepth)
         integrator.get_solver().set_n_body(n_body)
 
         # Compute the light curve.
